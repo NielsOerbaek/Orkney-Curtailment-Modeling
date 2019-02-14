@@ -1,3 +1,4 @@
 *.pyc
 config.py
 *.h5
+data

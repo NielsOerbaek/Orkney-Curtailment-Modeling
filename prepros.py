@@ -9,7 +9,7 @@ import config
 
 zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
 timesteps = 6*3
-batch_size = 32
+batch_size = 16
 
 client = pymongo.MongoClient("mongodb://"+config.reader_user+":"+config.reader_pw+"@167.99.129.50:27017/sse-data")
 db = client["sse-data"]
@@ -73,6 +73,7 @@ def makeDataset(start, stop):
     sse_df = getDataFrame(start, stop)
     w_df = getWeatherDataFrame(start, stop, 3)
 
+    # TODO: You need to use targets for 3 hours in the future, not now! You need to alter getDataFrame. Maybe split into getGenDemand and getCurtailments.
     # Split out target values
     y_df = sse_df[["Zone 2"]]
 
