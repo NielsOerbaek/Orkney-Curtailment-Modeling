@@ -1,5 +1,5 @@
 from keras.layers import Input,LSTM,Dense
-from keras.models import Model
+from keras.models import Model, load_model
 import tensorflow
 
 import prepros as pp
@@ -19,3 +19,6 @@ def train_and_save(seq_train, seq_val, num_features, num_classes, epochs=10, fil
     model.fit_generator(seq_train, epochs=epochs, validation_data=seq_val)
     model.save("./data/"+filename)
     return model
+
+def load(filename="predictor.h5"):
+    return load_model("./data/"+filename)
