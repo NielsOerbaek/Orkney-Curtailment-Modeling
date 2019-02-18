@@ -73,16 +73,17 @@ def makeDataset(start, stop, hours_forecast=3):
     start = datetime.strptime(start, '%Y-%m-%d').timestamp()
     stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
 
-    demgen_df = getDemandGen(start, stop).resample("H", convention='start').mean()
-    w_df = getWeather(start, stop, hours_forecast).resample("H", convention='start').mean()
-    y_df = getANMStatus(start, stop, hours_forecast).resample("H", convention='start').max()
+    # Get dataframes and round them to nearest hour.
+    demgen_df = getDemandGen(start, stop).resample("10min").mean()
+    w_df = getWeather(start, stop, hours_forecast).resample("10min").mean()
+    y_df = getANMStatus(start, stop, hours_forecast).resample("10min").max()
+
+    # TODO: Make a separate weather dataset for the forecast data.
 
     # Join DemGen-data, with weather- and time-data and average over 1 hour of readings
-    x_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='H', closed="left"))
+    x_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='10min', closed="left"))
     x_df = x_df.join(demgen_df).join(w_df).ffill().bfill()
-    # Round all data to nearest hours
-    # x_df = x_df.resample("H").mean()
-    # Add relevand time and date information
+    # Add relevant time and date information
     x_df["hour"] = [d.hour+1 for d in x_df.index]
     x_df["day"] = [d.day+1 for d in x_df.index]
     x_df["month"] = [d.month+1 for d in x_df.index]
@@ -93,6 +94,8 @@ def makeDataset(start, stop, hours_forecast=3):
     dump_y = y_df[~y_df.index.isin(x_df.index)].index
     x_df.drop(dump_x, inplace=True)
     y_df.drop(dump_y, inplace=True)
+
+    print(x_df.shape)
 
     # Go from dataframes to numpy arrays
     x, y = x_df.values, y_df.values
