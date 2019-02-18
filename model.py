@@ -4,7 +4,7 @@ import tensorflow
 
 import prepros as pp
 
-def train_and_save(seq_train, seq_val, num_features, num_classes, epochs=10, filename="predictor.h5"):
+def train_and_save(x_train, y_train, x_val, y_val, num_features, num_classes, epochs=10, filename="predictor.h5"):
 
     input = Input(shape=(pp.timesteps,num_features))
     lstm_1 = LSTM(128, return_sequences=True)(input)
@@ -16,7 +16,7 @@ def train_and_save(seq_train, seq_val, num_features, num_classes, epochs=10, fil
                   metrics=['accuracy'])
 
     print(model.summary())
-    model.fit_generator(seq_train, epochs=epochs, validation_data=seq_val)
+    model.fit(x_train, y_train, epochs=epochs, validation_data=(x_val, y_val))
     model.save("./data/"+filename)
     return model
 
