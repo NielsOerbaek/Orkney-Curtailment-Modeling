@@ -23,7 +23,7 @@ def preloadModels():
     print(" - Done!")
 
 def makePrediction(ts,f,dt):
-    time_to_forecast = dt - datetime.now()
+    time_to_forecast = dt - datetime.utcnow()
     model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
 
