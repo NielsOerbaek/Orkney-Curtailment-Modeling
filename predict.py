@@ -22,9 +22,7 @@ def preloadModels():
         models[f] = (model,norms)
     print(" - Done!")
 
-def getPrediction():
-    ts, f, dt = pp.getPredictionData()
-
+def getPrediction(ts,f,dt):
     time_to_forecast = dt - datetime.now()
     model_number = max(round(time_to_forecast.seconds / 60 / 30)-1, 0)
     model_name = model_files[model_number]
