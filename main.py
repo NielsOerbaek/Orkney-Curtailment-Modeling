@@ -4,38 +4,31 @@ import model as m
 import pprint
 import numpy as np
 
-load_model = False
-file_name = "all_zones_DecJan-predictor"
+load_model = True
+file_name = "all_zones_DecJan_HybridPredictor"
 
-x,y = pp.makeDataset("2018-12-01", "2019-02-01")
+xts, ts_norms, xf, f_norms, y = pp.makeDataset("2018-12-01", "2019-02-01")
 # y = pp.reduceZones(y)
 
-x_train_raw, x_val_raw, y_train, y_val = pp.splitData(x,y)
+#Save the norms for later use
+pickle.dump((ts_norms, f_norms), open("./data/"+file_name+".norms", "wb"))
 
-x_train, norms = pp.normalizeData(x_train_raw)
-x_val = x_val_raw / norms
-pickle.dump(norms, open("./data/"+file_name+".norms", "wb"))
+print(xts.shape, ts_norms.shape, xf.shape, f_norms.shape, y.shape)
 
-data_dim = x_train.shape[1]
-num_classes = y_train.shape[1]
+xts_train, xts_val, xf_train, xf_val, y_train, y_val = pp.splitData(xts, xf, y)
 
-x_train, y_train = pp.makeTimeseries(x_train, y_train)
-x_val, y_val = pp.makeTimeseries(x_val, y_val)
 
 # TODO: Maybe try to predict one zone at a time?
 
 # Load model or train new model
-if load_model: model = m.load(file_name+".h5")
-else: model = m.train_and_save(x_train, y_train, x_val, y_val, data_dim, num_classes, 10, file_name+".h5")
+if load_model: model = m.load(file_name)
+else: model = m.train_and_save(xts_train, xf_train, y_train, xts_val, xf_val, y_val, 10, file_name)
 
 # Make test dataset and predict
-x_test_raw, y_test = pp.makeDataset("2019-02-01", "2019-02-15")
-x_test = x_test_raw / norms
-# y_test = pp.reduceZones(y_test)
-x_test, y_test = pp.makeTimeseries(x_test, y_test)
+xts_test, ts_norms, xf_test, f_norms, y_test = pp.makeDataset("2019-02-01", "2019-02-15", norms=(ts_norms, f_norms))
 
 zone_acc = np.zeros(len(pp.zone_names))
-predictions = model.predict(x_test)
+predictions = model.predict([xts_test, xf_test])
 
 for i, p in enumerate(predictions):
     for j,z in enumerate(p):

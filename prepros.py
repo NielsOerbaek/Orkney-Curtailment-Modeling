@@ -2,7 +2,6 @@ import pymongo
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
-from keras.preprocessing.sequence import TimeseriesGenerator
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import normalize
 import config
@@ -69,47 +68,63 @@ def getWeather(start=0, end=0, hours=0):
     df = pd.DataFrame.from_dict(data, orient="index")
     return df
 
-def makeDataset(start, stop, hours_forecast=3):
+def makeDataset(start, stop, hours_forecast=3, norms=None):
     start = datetime.strptime(start, '%Y-%m-%d').timestamp()
     stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
 
     # Get dataframes and round them to nearest hour.
-    demgen_df = getDemandGen(start, stop).resample("10min").mean()
-    w_df = getWeather(start, stop, hours_forecast).resample("10min").mean()
-    y_df = getANMStatus(start, stop, hours_forecast).resample("10min").max()
+    demgen_df = getDemandGen(start, stop).resample("10min").mean() # Demand Generation data
+    hw_df = getWeather(start, stop, 0).resample("10min").mean() # Historical Weather data
+    f_df = getWeather(start, stop, hours_forecast).resample("10min").mean() # Weather Forecast data
+
+    y_df = getANMStatus(start, stop, hours_forecast).resample("10min").max() # Truth Labels
 
     # TODO: Make a separate weather dataset for the forecast data.
 
     # Join DemGen-data, with weather- and time-data and average over 1 hour of readings
-    x_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='10min', closed="left"))
-    x_df = x_df.join(demgen_df).join(w_df).ffill().bfill()
+    h_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='10min', closed="left"))
+    h_df = h_df.join(demgen_df).join(hw_df).ffill().bfill()
     # Add relevant time and date information
-    x_df["hour"] = [d.hour+1 for d in x_df.index]
-    x_df["day"] = [d.day+1 for d in x_df.index]
-    x_df["month"] = [d.month+1 for d in x_df.index]
-    x_df["weekday"] = [d.weekday()+1 for d in x_df.index]
+    h_df["hour"] = [d.hour+1 for d in h_df.index]
+    h_df["day"] = [d.day+1 for d in h_df.index]
+    h_df["month"] = [d.month+1 for d in h_df.index]
+    h_df["weekday"] = [d.weekday()+1 for d in h_df.index]
 
     # Align x and y by dropping times that are in one but not the other
-    dump_x = x_df[~x_df.index.isin(y_df.index)].index
-    dump_y = y_df[~y_df.index.isin(x_df.index)].index
-    x_df.drop(dump_x, inplace=True)
-    y_df.drop(dump_y, inplace=True)
+    print(h_df.shape, f_df.shape, y_df.shape)
 
-    print(x_df.shape)
+    y_df, xh_df = y_df.align(h_df, join="inner", axis=0, method="pad")
+    xh_df, xf_df = xh_df.align(f_df, join="left", axis=0, method="pad")
+
+    print(xh_df.shape, xf_df.shape, y_df.shape)
 
     # Go from dataframes to numpy arrays
-    x, y = x_df.values, y_df.values
-    return x, y
+    xh, xf, y = xh_df.values, xf_df.values, y_df.values
+
+    if norms is None:
+        # Normalize data and return norms
+        xh, h_norms = normalizeData(xh)
+        xf, f_norms = normalizeData(xf)
+    else:
+        # Unpack norms and apply to data
+        h_norms, f_norms = norms
+        xh = xh / h_norms
+        xf = xf / f_norms
+
+    # Make the timeseries from the historical data
+    xts, xf, y = makeTimeseries(xh, xf, y)
+
+    return xts, h_norms, xf, f_norms, y
 
 
-def makeTimeseries(x,y):
-    samples = len(x)-timesteps+1
-    ts = np.zeros(shape=(samples,timesteps,x.shape[1]))
+def makeTimeseries(x_h,x_f,y):
+    samples = len(x_h)-timesteps+1
+    ts = np.zeros(shape=(samples, timesteps, x_h.shape[1]))
     for i in range(samples):
-        ts[i] = x[i:i+timesteps]
-    return ts, y[timesteps-1:]
+        ts[i] = x_h[i:i+timesteps]
+    return ts, x_f[timesteps-1:], y[timesteps-1:]
 
-def splitData(x,y): return train_test_split(x, y, test_size=0.1, shuffle=False)
+def splitData(ts,f,y): return train_test_split(ts,f,y, test_size=0.1, shuffle=False)
 def normalizeData(x): return normalize(x, axis=0, norm="l2", return_norm=True)
 def reduceZones(y): return np.maximum.reduce(y, 1, initial=0)[:,np.newaxis]
 def rebuildDate(x): return datetime(datetime.now().year, int(x[-2])-1, int(x[-3])-1, int(x[-4])-1) + timedelta(hours=hours_forecast)
