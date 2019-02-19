@@ -3,8 +3,9 @@ from keras.models import Model, load_model
 
 import prepros as pp
 
+# TODO: Change model to both output pr zone and a overall prediction.
 
-def train_and_save(xts_train, xf_train, y_train, xts_val, xf_val, y_val, epochs=10, filename="predictor"):
+def train_and_save(xts_train, xf_train, y_train, yr_train, xts_val=None, xf_val=None, y_val=None, yr_val=None, epochs=10, filename="predictor"):
     ts_features = xts_train.shape[-1]
     f_features = xf_train.shape[-1]
     num_classes = y_train.shape[-1]
@@ -19,13 +20,15 @@ def train_and_save(xts_train, xf_train, y_train, xts_val, xf_val, y_val, epochs=
     merged = concatenate([lstm_2, dense_1])
     dense_2 = Dense(128)(merged)
     # Output layer
-    output = Dense(num_classes, activation="sigmoid")(dense_2)
-    model = Model(inputs=[ts_input, f_input], outputs=output)
+    zone_output = Dense(num_classes, activation="sigmoid", name="Zones")(dense_2)
+    reduced_output = Dense(1, activation="sigmoid", name="Reduced")(dense_2)
+    model = Model(inputs=[ts_input, f_input], outputs=[zone_output, reduced_output])
     model.compile(loss='binary_crossentropy',
                   optimizer='rmsprop',
                   metrics=['accuracy'])
     print(model.summary())
-    model.fit([xts_train, xf_train], y_train, epochs=epochs, validation_data=([xts_val, xf_val], y_val))
+    if xts_val is None: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs)
+    else: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs, validation_data=([xts_val, xf_val], [y_val,yr_val]))
     model.save("./data/"+filename+".h5")
     return model
 
