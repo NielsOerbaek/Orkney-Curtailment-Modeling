@@ -3,7 +3,7 @@ import predict as p
 import prepros as pp
 
 starttime = time.time()
-wait_secs = 1*60.0
+wait_secs = 10*60.0
 
 while True:
     ts,f,dt = pp.getPredictionData()
