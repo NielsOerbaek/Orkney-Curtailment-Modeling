@@ -22,9 +22,9 @@ def preloadModels():
         models[f] = (model,norms)
     print(" - Done!")
 
-def getPrediction(ts,f,dt):
+def makePrediction(ts,f,dt):
     time_to_forecast = dt - datetime.now()
-    model_number = max(round(time_to_forecast.seconds / 60 / 30)-1, 0)
+    model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
 
     if model_name in models.keys(): model, norms = models[model_name]
@@ -57,3 +57,6 @@ def storePrediction(zp,rp,dt,delta):
 
     pred_col = db["predictions"]
     pred_col.insert_one(pred)
+
+def getAllPredictions():
+    return list(db["predictions"].find({}, { "_id": 0 }))
