@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Orkney ANM Curtailment Forecast</title>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+
+  <style>
+    body {
+    	font-family: 'Cabin';
+    	max-width: 1200px;
+    	margin: 0 auto;
+    }
+    #main-zones {
+      display: flex;
+      justify-content: space-around;
+    }
+    .main-zone {
+      text-align: center;
+    }
+  </style>
+
+</head>
+<body>
+		<h1>Curtailment forecasts</h1>
+		<div id="main-prediction">
+      <h4>
+        Forecast for Orkney at <span id="main-time"></span><br/>
+        <small>Time of calculation: <span id="main-time-source"></span></small>
+      </h4>
+      <h2>Chance of curtailment in the ANM: <span id="main-overall"/></h2>
+      <div id="main-zones"></div>
+    </div>
+		<hr>
+		<h3>Map of the ANM zones:</h3>
+		<img src="https://www.ssen.co.uk/uploadedImages/SSEPD/SSEN/Content/ANM/Anm-OrkneyNetworkMap.jpg"/>
+
+<script>
+  const predictions = {{predictions|safe}}
+  const main = predictions.pop()
+  const zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
+
+  fp = p => Math.round(p*100)+"%"
+  moment.defaultFormat = "DD.MM.YYYY HH:mm"
+
+  $(function() {
+    $("#main-overall").html(fp(main.overall))
+    $("#main-time").html(moment.unix(main.target_time).format())
+    $("#main-time-source").html(moment.unix(main.prediction_time).format())
+    $mainZones = $("#main-zones")
+    main.zones.forEach((p,i) => {
+      $div = $("<div class='main-zone'></div>")
+      $div.appendTo($mainZones)
+      $zoneName = $("<h4>"+zone_names[i]+"</h4>")
+      $zoneName.appendTo($div)
+      $zoneP = $("<h3>"+fp(p)+"</h3>")
+      $zoneP.appendTo($div)
+    })
+  });
+
+</script>
+</body>
+</html>
