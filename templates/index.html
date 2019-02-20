@@ -74,12 +74,12 @@
 
   function getColorClass(p) {
     if(p > 0.80) { return "red" }
-    if(p > 0.50) { return "amber"}
+    if(p > 0.50) { return "orange"}
     else {return "teal"}
   }
 
   function removeColorClasses(item) {
-    item.removeClass("red").removeClass("amber").removeClass("teal").removeClass("blue")
+    item.removeClass("red").removeClass("orange").removeClass("teal").removeClass("blue")
     return item
   }
 
