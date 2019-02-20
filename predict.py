@@ -27,27 +27,32 @@ def preloadModels():
     print(" - Done!")
 
 def makePrediction(ts,f,dt):
+    print("----------------------")
     time_to_forecast = dt - datetime.utcnow()
     model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
+    print("Making curtailment forecast for", dt, ", which is in ", time_to_forecast)
 
+    print("Loading model:", model_name, "...")
     model = m.load(model_name)
     norms = pickle.load(open("./data/"+model_name+".norms", "rb"))
 
     # Apply norms
     ts_norm, f_norm = norms
     ts, f = ts / ts_norm, f / f_norm
-
     ts, f = [ts], [f] # Wrap input
+
+    print("Do prediction...")
     predictions = model.predict([ts,f])
     zone_prediction = predictions[0][0]
     reduced_prediction = predictions[1][0][0]
 
-    print("Curtailment prediction for", dt, ", which is in ", time_to_forecast)
+    print()
+    print("Overall prediction:", reduced_prediction)
     print("Zone names:", pp.zone_names)
-    print("Zone prediction:", zone_prediction)
-    print("Reduced prediction:", reduced_prediction)
+    print("Zone predictions:", zone_prediction)
 
+    print("Clearing session and deleting model.")
     # Clear the Keras session and kill the model. Should be removed if we can handle the
     clear_session()
     del model
