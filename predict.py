@@ -57,14 +57,15 @@ def makePrediction(ts,f,dt):
     clear_session()
     del model
 
-    return zone_prediction, reduced_prediction, dt, time_to_forecast
+    return zone_prediction, reduced_prediction, dt, time_to_forecast, model_name
 
-def storePrediction(zp,rp,dt,delta):
+def storePrediction(zp,rp,dt,delta,model):
     pred = dict()
     pred["zones"] = zp.tolist()
     pred["overall"] = float(rp)
     pred["target_time"] = dt.timestamp()
     pred["prediction_time"] = (dt - delta).timestamp()
+    pred["model"] = model
 
     pred_col = db["predictions"]
     pred_col.insert_one(pred)

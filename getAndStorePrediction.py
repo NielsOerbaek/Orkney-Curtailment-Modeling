@@ -7,6 +7,6 @@ wait_secs = 10*60.0
 
 while True:
     ts,f,dt = pp.getPredictionData()
-    zp,rp,dt,td = p.makePrediction(ts,f,dt)
-    p.storePrediction(zp,rp,dt,td)
+    zp,rp,dt,td,m = p.makePrediction(ts,f,dt)
+    p.storePrediction(zp,rp,dt,td,m)
     time.sleep(wait_secs - ((time.time() - starttime) % wait_secs))
