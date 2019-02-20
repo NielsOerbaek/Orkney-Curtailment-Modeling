@@ -9,6 +9,14 @@ h1.title {
   text-align: center;
   padding-bottom: 50px;
 }
+.summary {
+  font-size: 16px;
+  border-left-width: 5px;
+  border-color: black.
+}
+.summary.red {border-left-color: #f44336}
+.summary.amber {border-left-color: #ffc107}
+.summary.teal {border-left-color: #009688}
 #main-prediction {
   position: relative;
   background:

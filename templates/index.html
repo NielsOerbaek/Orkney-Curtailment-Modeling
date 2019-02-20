@@ -10,14 +10,16 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
   <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone.min.js"></script>
 </head>
 <body class="container">
 		<h1 class="title">Orkney ANM Curtailment Forecast</h1>
+    <div class="summary lighten-4"></div>
 		<div id="main-prediction" class="row">
       <div class="col l4 m6 s12">
         <h3>Overall:</h3>
         <div class="overall card-panel darken-1">
-          <div id="main-time">Orkney, <span></span></div>
+          <div id="main-time"><span></span></div>
           <div id="main-overall"></div>
           <div class="subtext">chance of curtailment</div>
           <div id="main-time-source">Time of calculation: <span></span></div>
@@ -39,12 +41,8 @@
 
 <script>
   const predictions = {{predictions|safe}}
-
-  console.log(predictions)
-
   const main = predictions[0]
   const zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
-
   fp = p => Math.round(p*100)+"%"
   moment.defaultFormat = "HH:mm DD.MM.YYYY"
 
@@ -56,7 +54,7 @@
   function renderMain(pre){
     $("#main-overall").html(fp(pre.overall))
     removeColorClasses($(".overall")).addClass(getColorClass(pre.overall))
-    $("#main-time span").html(moment.unix(pre.target_time).format("HH:mm"))
+    $("#main-time span").html(moment.unix(pre.target_time).format("Do MMM, HH:mm"))
     $("#main-time-source span").html(moment.unix(pre.prediction_time).format("HH:mm"))
     $mainZones = $("#main-zones")
     $mainZones.html("")
@@ -70,6 +68,8 @@
       $zoneP = $("<h3>"+fp(p)+"</h3>")
       $zoneP.appendTo($div)
     })
+    $(".summary").html(getSummary(pre))
+    removeColorClasses($(".summary")).addClass(getColorClass(pre.overall))
   }
 
   function getColorClass(p) {
@@ -85,11 +85,18 @@
 
   function getNewPrediction() {
     $(".load-modal").fadeIn()
-    $.ajax("/forecast").done(p => {
-      console.log(p)
-      renderMain(p)
-      $(".load-modal").fadeOut()
-    })
+    $.ajax("/forecast").done(p => renderMain(p)).always(() => $(".load-modal").fadeOut())
+  }
+
+  function makeSummary(pre) {
+    if(pre.overall > 0.80) {
+      return "There is a high chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
+    if(pre.overall > 0.80) {
+      return "There is a considerable chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+    }
+    else {
+      return "There is low ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+    }
   }
 
 </script>
