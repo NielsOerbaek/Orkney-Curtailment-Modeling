@@ -26,6 +26,7 @@ def preloadModels():
         models[f] = (model,norms)
     print(" - Done!")
 
+
 def makePrediction(ts,f,dt):
     print("----------------------")
     time_to_forecast = dt - datetime.utcnow()
@@ -59,6 +60,7 @@ def makePrediction(ts,f,dt):
 
     return zone_prediction, reduced_prediction, dt, time_to_forecast, model_name
 
+
 def storePrediction(zp,rp,dt,delta,model):
     pred = dict()
     pred["zones"] = zp.tolist()
@@ -71,5 +73,12 @@ def storePrediction(zp,rp,dt,delta,model):
     pred_col.insert_one(pred)
     return pred
 
+
+def getAndStorePrediction():
+    ts,f,dt = pp.getPredictionData()
+    zp,rp,dt,td,m = makePrediction(ts,f,dt)
+    return storePrediction(zp,rp,dt,td,m)
+
+
 def getAllPredictions():
-    return list(db["predictions"].find({}, { "_id": 0 }))
+    return list(db["predictions"].find({}, { "_id": 0 }).sort("prediction_time", pymongo.DESCENDING))
