@@ -74,7 +74,7 @@
 
   function getColorClass(p) {
     if(p > 0.80) { return "red" }
-    if(p > 0.60) { return "amber"}
+    if(p > 0.50) { return "amber"}
     else {return "teal"}
   }
 
@@ -90,12 +90,12 @@
 
   function makeSummary(pre) {
     if(pre.overall > 0.80) {
-      return "There is a high chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
-    if(pre.overall > 0.80) {
-      return "There is a considerable chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+      return "Summary: There is a high chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
+    if(pre.overall > 0.50) {
+      return "Summary: There is a considerable chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
     }
     else {
-      return "There is low ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+      return "Summary: There is low chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
     }
   }
 
