@@ -1,6 +1,7 @@
 import pickle
 import prepros as pp
 import model as m
+import config
 
 # ------ PARAMETERS --------
 file_name = "predictor"
