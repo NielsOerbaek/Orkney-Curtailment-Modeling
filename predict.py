@@ -31,7 +31,7 @@ def makePrediction(ts,f,dt):
     time_to_forecast = dt - datetime.utcnow()
     model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
-    print("Making curtailment forecast for", dt, ", which is in ", time_to_forecast)
+    print(datetime.utcnow(), "- Making curtailment forecast for", dt, ", which is in", time_to_forecast)
 
     print("Loading model:", model_name, "...")
     model = m.load(model_name)
@@ -69,6 +69,7 @@ def storePrediction(zp,rp,dt,delta,model):
 
     pred_col = db["predictions"]
     pred_col.insert_one(pred)
+    return pred
 
 def getAllPredictions():
     return list(db["predictions"].find({}, { "_id": 0 }))
