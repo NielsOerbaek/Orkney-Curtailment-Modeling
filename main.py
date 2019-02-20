@@ -15,7 +15,7 @@ file_name += "_"+str(minutes_forecast)
 
 xts, ts_norms, xf, f_norms, y, yr = pp.makeDataset("2018-12-01", "2019-02-01", hours_forecast=(minutes_forecast/60))
 #Save the norms for later use
-pickle.dump((ts_norms, f_norms), open("./data/"+file_name+".norms", "wb"))
+pickle.dump((ts_norms, f_norms), open(config.DATA_PATH+file_name+".norms", "wb"))
 
 print("Size of timeseries data:", xts.nbytes)
 print(xts.shape, ts_norms.shape, xf.shape, f_norms.shape, y.shape, yr.shape)

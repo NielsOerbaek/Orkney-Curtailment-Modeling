@@ -2,8 +2,7 @@ from keras.layers import Input,LSTM,Dense, concatenate
 from keras.models import Model, load_model
 
 import prepros as pp
-
-# TODO: Change model to both output pr zone and a overall prediction.
+import config
 
 def train_and_save(xts_train, xf_train, y_train, yr_train, xts_val=None, xf_val=None, y_val=None, yr_val=None, epochs=10, filename="predictor"):
     ts_features = xts_train.shape[-1]
@@ -27,11 +26,11 @@ def train_and_save(xts_train, xf_train, y_train, yr_train, xts_val=None, xf_val=
                   optimizer='rmsprop',
                   metrics=['accuracy'])
     print(model.summary())
-    if xts_val is None: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs)
-    else: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs, validation_data=([xts_val, xf_val], [y_val,yr_val]))
-    model.save("./data/"+filename+".h5")
+    if xts_val is None: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs, batch_size=1)
+    else: model.fit([xts_train, xf_train], [y_train, yr_train], epochs=epochs, batch_size=1, validation_data=([xts_val, xf_val], [y_val,yr_val]))
+    model.save(config.DATA_PATH+filename+".h5")
     return model
 
 
 def load(filename="predictor"):
-    return load_model("./data/"+filename+".h5")
+    return load_model(config.DATA_PATH+filename+".h5")

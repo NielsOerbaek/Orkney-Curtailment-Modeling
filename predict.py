@@ -22,7 +22,7 @@ def preloadModels():
     for f in model_files:
         print(f, end=", ", flush=True)
         model = m.load(f)
-        norms = pickle.load(open("./data/"+f+".norms", "rb"))
+        norms = pickle.load(open(config.DATA_PATH+f+".norms", "rb"))
         models[f] = (model,norms)
     print(" - Done!")
 
@@ -35,7 +35,7 @@ def makePrediction(ts,f,dt):
 
     print("Loading model:", model_name, "...")
     model = m.load(model_name)
-    norms = pickle.load(open("./data/"+model_name+".norms", "rb"))
+    norms = pickle.load(open(config.DATA_PATH+model_name+".norms", "rb"))
 
     # Apply norms
     ts_norm, f_norm = norms
