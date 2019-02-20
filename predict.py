@@ -59,7 +59,7 @@ def storePrediction(zp,rp,dt,delta):
     pred["zones"] = zp.tolist()
     pred["overall"] = float(rp)
     pred["target_time"] = dt.timestamp()
-    pred["prediction_time"] = (dt + delta).timestamp()
+    pred["prediction_time"] = (dt - delta).timestamp()
 
     pred_col = db["predictions"]
     pred_col.insert_one(pred)
