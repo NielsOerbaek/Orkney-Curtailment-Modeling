@@ -1,6 +1,7 @@
 import pickle
 from datetime import datetime
 import pymongo
+from keras.backend import clear_session
 
 import prepros as pp
 import model as m
@@ -9,10 +10,13 @@ import config
 client = pymongo.MongoClient("mongodb://"+config.writer_user+":"+config.writer_pw+"@"+config.SERVER+"/sse-data")
 db = client["sse-data"]
 
-
 model_files = ["predictor_30","predictor_60","predictor_90","predictor_120","predictor_150","predictor_180"]
 models = dict()
 
+# NOTE: Apparently keras cannot handle more that one model at a time.
+# Then you need to set multiple tf sessions manually.
+# For now we'll just load a model and kill it again each time. Slow, but works.
+# TODO: Implement the above solution.
 def preloadModels():
     print("Loading models: ", end="", flush=True)
     for f in model_files:
@@ -27,10 +31,8 @@ def makePrediction(ts,f,dt):
     model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
 
-    if model_name in models.keys(): model, norms = models[model_name]
-    else:
-        model = m.load(model_name)
-        norms = pickle.load(open("./data/"+model_name+".norms", "rb"))
+    model = m.load(model_name)
+    norms = pickle.load(open("./data/"+model_name+".norms", "rb"))
 
     # Apply norms
     ts_norm, f_norm = norms
@@ -45,6 +47,10 @@ def makePrediction(ts,f,dt):
     print("Zone names:", pp.zone_names)
     print("Zone prediction:", zone_prediction)
     print("Reduced prediction:", reduced_prediction)
+
+    # Clear the Keras session and kill the model. Should be removed if we can handle the
+    clear_session()
+    del model
 
     return zone_prediction, reduced_prediction, dt, time_to_forecast
 
