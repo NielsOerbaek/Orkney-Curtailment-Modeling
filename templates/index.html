@@ -68,7 +68,7 @@
       $zoneP = $("<h3>"+fp(p)+"</h3>")
       $zoneP.appendTo($div)
     })
-    $(".summary").html(getSummary(pre))
+    $(".summary").html(makeSummary(pre))
     removeColorClasses($(".summary")).addClass(getColorClass(pre.overall))
   }
 
