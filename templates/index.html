@@ -21,7 +21,7 @@
         <div class="overall card-panel darken-1">
           <div id="main-time"><span></span></div>
           <div id="main-overall"></div>
-          <div class="subtext">chance of curtailment</div>
+          <div class="subtext">risk of curtailment</div>
           <div id="main-time-source">Time of calculation: <span></span></div>
         </div>
         <a class="waves-effect waves-light indigo btn get-forecast">Generate new prediction</a>
@@ -90,12 +90,12 @@
 
   function makeSummary(pre) {
     if(pre.overall > 0.80) {
-      return "Summary: There is a high chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
+      return "Summary: There is a high risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
     if(pre.overall > 0.50) {
-      return "Summary: There is a considerable chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+      return "Summary: There is a considerable risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
     }
     else {
-      return "Summary: There is low chance ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+      return "Summary: There is low risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
     }
   }
 

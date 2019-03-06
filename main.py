@@ -3,11 +3,12 @@ import prepros as pp
 import model as m
 import pprint
 import numpy as np
+import config
 
 # ------ PARAMETERS --------
 load_model = False
 file_name = "predictor"
-minutes_forecast = 180
+minutes_forecast = 00
 # TODO: Move this to cmi arguments?
 # --------------------------
 
@@ -27,7 +28,7 @@ if load_model: model = m.load(file_name)
 else: model = m.train_and_save(xts_train, xf_train, y_train, yr_train, xts_val, xf_val, y_val, yr_val, 3, file_name)
 
 # Make test dataset and predict
-xts_test, ts_norms, xf_test, f_norms, y_test, yr_test = pp.makeDataset("2019-02-01", "2019-02-20", hours_forecast=(minutes_forecast/60), norms=(ts_norms, f_norms))
+xts_test, ts_norms, xf_test, f_norms, y_test, yr_test = pp.makeDataset("2019-02-01", "2019-03-01", hours_forecast=(minutes_forecast/60), norms=(ts_norms, f_norms))
 
 zone_acc = np.zeros(len(pp.zone_names))
 reduced_acc = 0
