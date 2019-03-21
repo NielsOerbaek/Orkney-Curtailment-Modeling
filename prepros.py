@@ -143,10 +143,10 @@ def getSingleDataframe(start, stop, fromPickle=False):
     if not fromPickle:
         xh_df, xf_df, y_df = getDataframes(start, stop, 0)
         df = addTimeCols(xh_df).join(addReducedCol(y_df))
-        pickle.dump(df, open("SingleFrame"+start+"-"+stop, "wb"))
+        pickle.dump(df, open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "wb"))
         print("Saved dataframe as pickle: SingleFrame"+start+"-"+stop)
     else:
-        df = pickle.load(open("SingleFrame"+start+"-"+stop, "rb"))
+        df = pickle.load(open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "rb"))
         print("Loaded dataframe as pickle: SingleFrame"+start+"-"+stop)
     return df
 
