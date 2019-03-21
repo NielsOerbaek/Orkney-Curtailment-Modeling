@@ -6,12 +6,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import normalize
 import requests as re
 import config
+import pickle
 
 zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
+bad_weather_date = datetime.strptime("2019-02-12", '%Y-%m-%d')
+windgencorr = np.poly1d([-0.0262,0.3693,2.09,-1.626])
 hours_forecast = 3
 hours_history = 8
 timesteps = hours_history*6
 batch_size = 1
+
 
 client = pymongo.MongoClient("mongodb://"+config.reader_user+":"+config.reader_pw+"@"+config.SERVER+"/sse-data")
 db = client["sse-data"]
@@ -80,33 +84,7 @@ def weatherToDict(w):
 
 
 def makeDataset(start, stop, hours_forecast=3, norms=None):
-    start = datetime.strptime(start, '%Y-%m-%d').timestamp()
-    stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
-    if stop <= start: raise ValueError("Invalid date range: "+ str(datetime.fromtimestamp(start)) +" to "+ str(datetime.fromtimestamp(stop)))
-
-    # Get dataframes and resample them.
-    demgen_df = getDemandGen(start, stop).resample("10min").mean() # Demand Generation data
-    hw_df = getWeather(start, stop, 0).resample("10min").mean() # Historical Weather data
-    f_df = getWeather(start, stop, hours_forecast).resample("10min").mean() # Weather Forecast data
-    y_df = getANMStatus(start, stop, hours_forecast).resample("10min").max() # Truth Labels
-    # NOTE: You could also add previous ANM zone status' to the train input. Maybe that could make sense.
-
-    # Join DemGen-data, with weather- and time-data and average over readings
-    h_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='10min', closed="left"))
-    h_df = h_df.join(demgen_df).join(hw_df)
-    f_df = f_df
-
-    # Add relevant time and date information to forecast data
-    f_df["hour"] = [d.hour+1 for d in f_df.index]
-    f_df["day"] = [d.day+1 for d in f_df.index]
-    f_df["month"] = [d.month+1 for d in f_df.index]
-    f_df["weekday"] = [d.weekday()+1 for d in f_df.index]
-    # Align x and y by dropping times that are in one but not the other
-    y_df, xh_df = y_df.align(h_df, join="inner", axis=0, method="pad")
-    xh_df, xf_df = xh_df.align(f_df, join="left", axis=0, method="pad")
-    # Fill in possible missing values
-    xh_df = xh_df.ffill().bfill()
-    xf_df = xf_df.ffill().bfill()
+    xh_df, xf_df, y_df = getDataframes(start, stop, hours_forecast)
 
     # Go from dataframes to numpy arrays
     xh, xf, y = xh_df.values, xf_df.values, y_df.values
@@ -128,6 +106,54 @@ def makeDataset(start, stop, hours_forecast=3, norms=None):
 
     return xts, h_norms, xf, f_norms, y, yr
 
+def getDataframes(start, stop, hours_forecast=3):
+    start = datetime.strptime(start, '%Y-%m-%d').timestamp()
+    stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
+    if stop <= start: raise ValueError("Invalid date range: "+ str(datetime.fromtimestamp(start)) +" to "+ str(datetime.fromtimestamp(stop)))
+
+    # Get dataframes and resample them.
+    print("Getting Dem/Gen data")
+    demgen_df = getDemandGen(start, stop).resample("10min").mean() # Demand Generation data
+    print("Getting historical weather data")
+    hw_df = getWeather(start, stop, 0).resample("10min").mean() # Historical Weather data
+    print("Getting weather forecast data")
+    f_df = getWeather(start, stop, hours_forecast).resample("10min").mean() # Weather Forecast data
+    print("Getting ANM-status data")
+    y_df = getANMStatus(start, stop, hours_forecast).resample("10min").max() # Truth Labels
+    # NOTE: You could also add previous ANM zone status' to the train input. Maybe that could make sense.
+
+    # Join DemGen-data, with weather- and time-data and average over readings
+    h_df = pd.DataFrame(index=pd.date_range(start=datetime.fromtimestamp(start), end=datetime.fromtimestamp(stop), freq='10min', closed="left"))
+    h_df = h_df.join(demgen_df).join(hw_df)
+    f_df = f_df
+
+    f_df = addTimeCols(f_df)
+
+    # Align x and y by dropping times that are in one but not the other
+    y_df, xh_df = y_df.align(h_df, join="inner", axis=0, method="pad")
+    xh_df, xf_df = xh_df.align(f_df, join="left", axis=0, method="pad")
+    # Fill in possible missing values
+    xh_df = xh_df.ffill().bfill()
+    xf_df = xf_df.ffill().bfill()
+
+    return xh_df, xf_df, y_df
+
+
+def getSingleDataframe(start, stop, fromPickle=False):
+    if not fromPickle:
+        xh_df, xf_df, y_df = getDataframes(start, stop, 0)
+        df = addTimeCols(xh_df).join(addReducedCol(y_df))
+        pickle.dump(df, open("SingleFrame"+start+"-"+stop, "wb"))
+        print("Saved dataframe as pickle: SingleFrame"+start+"-"+stop)
+    else:
+        df = pickle.load(open("SingleFrame"+start+"-"+stop, "rb"))
+        print("Loaded dataframe as pickle: SingleFrame"+start+"-"+stop)
+    return df
+
+def addReducedCol(df):
+    if "Curtailment" in df.columns: df = df.drop(["Curtailment"], axis=1)
+    r = df[zone_names].apply(np.maximum.reduce, axis=1)[["Core Zone"]].rename(columns={"Core Zone": "Curtailment"})
+    return df.join(r)
 
 def makeTimeseries(x_h,x_f,y):
     samples = len(x_h)-timesteps+1
@@ -135,6 +161,23 @@ def makeTimeseries(x_h,x_f,y):
     for i in range(samples):
         ts[i] = x_h[i:i+timesteps]
     return ts, x_f[timesteps-1:], y[timesteps-1:]
+
+def addTimeCols(df):
+    # Add relevant time and date information
+    df["hour"] = [d.hour+1 for d in df.index]
+    df["day"] = [d.day+1 for d in df.index]
+    df["month"] = [d.month+1 for d in df.index]
+    df["weekday"] = [d.weekday()+1 for d in df.index]
+    return df
+
+def addTimeColsOneHot(df):
+    # Add relevant time and date information as one hots
+    df["hour"] = [toOneHot(d.hour,24) for d in df.index]
+    df["day"] = [toOneHot(d.day-1,31) for d in df.index]
+    df["month"] = [toOneHot(d.month-1,12) for d in df.index]
+    df["weekday"] = [toOneHot(d.weekday(),7) for d in df.index]
+    return df
+
 
 def splitData(ts,f,y,yr): return train_test_split(ts,f,y,yr, test_size=0.1, shuffle=False)
 def normalizeData(x): return normalize(x, axis=0, norm="l2", return_norm=True)
@@ -172,3 +215,50 @@ def getPredictionData():
     f, fdt = getForecastData()
     if len(ts) != timesteps: raise Exception("Timeseries has " + str(len(ts)) + " values, but should have " + str(timesteps))
     return ts,f,fdt
+
+def cleanData(df):
+    dt = timedelta(hours=6)
+    total_cleaned = 0
+    for z in zone_names:
+        b = df[z].sum()
+        cleanCol(df,dt,z)
+        r = b - df[z].sum()
+        total_cleaned += r
+        print("Cleaned from",z,":",r/6,"hours")
+    print("Total Cleaned:",total_cleaned/6,"hours")
+    return df
+
+def cleanCol(df, threshold, col_name):
+    c,d,e = False, False, False
+    cs, ds = None, None
+    for i, r in df.iterrows():
+        if not c and r[col_name]:
+            c, cs = True, i
+        elif c and not r[col_name]:
+            c,d = False, False
+            if e:
+                df.loc[cs:i,col_name] = 0
+                e = False
+        if c and not d and r["Demand"] > r["Generation"]:
+            d, ds = True, i
+        elif c and d and r["Demand"] <= r["Generation"]:
+            d = False
+        if not e and d and i-ds >= threshold:
+            e = True
+
+def estimateWindSpeeds(df):
+    genToWind = np.zeros(200)
+    print("Calculating wind speeds from generation")
+    for i in range(200): genToWind[i] =  max(0,windgencorr(i/10))
+    print("Done with lookup table")
+    def getSpeed(gen): return np.abs(genToWind - gen).argmin() / 10
+    for index, row in df.loc[:bad_weather_date,:].iterrows():
+        #print(row)
+        est_wind = getSpeed(row["Generation"])
+        df.loc[index,"speed"] = est_wind
+    return df
+
+def toOneHot(val,max):
+    a = np.zeros(shape=(max,)).astype(int)
+    a[val] = 1
+    return a
