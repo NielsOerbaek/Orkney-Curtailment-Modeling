@@ -246,6 +246,7 @@ def cleanCol(df, threshold, col_name):
         if not e and d and i-ds >= threshold:
             e = True
 
+#TODO: This is not working AT ALL. Use with caution
 def estimateWindSpeeds(df):
     genToWind = np.zeros(200)
     print("Calculating wind speeds from generation")
@@ -253,7 +254,6 @@ def estimateWindSpeeds(df):
     print("Done with lookup table")
     def getSpeed(gen): return np.abs(genToWind - gen).argmin() / 10
     for index, row in df.loc[:bad_weather_date,:].iterrows():
-        #print(row)
         est_wind = getSpeed(row["Generation"])
         df.loc[index,"speed"] = est_wind
     return df

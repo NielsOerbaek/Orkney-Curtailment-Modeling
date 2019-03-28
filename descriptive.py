@@ -1,14 +1,16 @@
 import prepros as pp
 from datetime import datetime
 import numpy as np
+import model as m
 
 def makeDescriptiveDataset(start, stop):
-    df = pp.getSingleDataframe(start, stop)
+    df = pp.getSingleDataframe(start, stop, fromPickle=True)
     df.dropna(inplace=True) # Remove NaN entries.
 
     print("Cleaning data...")
     df = pp.cleanData(df)
     df = pp.addReducedCol(df)
+    df = pp.estimateWindSpeeds(df)
 
     return df
 
@@ -36,7 +38,7 @@ windToGenLinear = lambda w: max(3.501*w + 2.915,0)
 windToGenPolyFull = np.poly1d(poly_coefs_full)
 windToGenPoly11 = np.poly1d(poly_coefs_11)
 def correlationModelK(w,d,h,k): return windToGenLinear(w) > (D[d-1][h-1] + k)
-def correlationModelKPoly(w,d,h,k): return windToGenPolyFull(w) > (D[d-1][h-1] + k)
+def correlationModelKPoly(w,d,h,k): return windToGenPolyFull(w) > (D[int(d)-1][int(h)-1] + k)
 
 def evaluateModels(start, stop):
     df = makeDescriptiveDataset(start, stop)
@@ -70,6 +72,38 @@ def evaluateModels(start, stop):
         print("(", k,",",round(hits/samples*100,2),")")
 
 
+def evaluateDataframe(df_train,df_predict):
+    percep = m.train_and_save_perceptron(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
+    neural_net = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
+
+    def actual(row): return row["Curtailment"]
+    def sc(row): return simpleModelK(row["Demand"],row["Generation"],7)
+    def cc(row): return correlationModelKPoly(row["speed"],row["weekday"],row["hour"],0)
+    def percep_gen_dem(row): return round(percep.predict([[row[["Demand", "Generation"]].values]])[0][0])
+    def nn_wind_time(row): return round(neural_net.predict([[row[["Demand", "Generation"]].values]])[0][0])
+
+    models = ["Actual", "SC7", "Perceptron", "CC0","G/D FFNN"]
+    model_functions = [actual, sc, percep_gen_dem, cc, nn_wind_time]
+    models_accs = np.zeros(shape=(len(models),))
+
+    # Generate x,y data for the mesh plot
+    print("Generating predictions for", df_predict.values.shape[0],"samples on", len(models), "models.")
+    accs = np.zeros(shape=(len(models),len(df_predict.index)))
+    for i, row in enumerate(df_predict.iterrows()):
+        if i % 100 == 0: print(".", end="", flush=True)
+        for j, model in enumerate(models):
+            accs[j,i] = model_functions[j](row[1])
+            if accs[j,i] == accs[0,i]: models_accs[j] += 1
+    print()
+
+    models_accs = models_accs / df_predict.values.shape[0]
+
+    for i, model in enumerate(models):
+        print(model, ":", round(models_accs[i]*100,2), "%")
+
+    return models, accs
+
+
 #evaluateModels("2019-02-18", "2019-02-25")
 #evaluateModels("2019-02-11", "2019-03-01")
-evaluateModels("2018-12-01", "2019-03-01")
+#evaluateModels("2018-12-01", "2019-03-01")

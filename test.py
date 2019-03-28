@@ -1,8 +1,4 @@
-import prepros as pp
+import plotter
 
-df = pp.getSingleDataframe("2019-02-11", "2019-03-01")
-
-dfc = pp.cleanData(df)
-
-
-print(dfc)
+plotter.buildModelGraph("2019-03-01", "2019-03-15")
+#plotter.buildModelGraph("2018-12-01", "2019-03-01")

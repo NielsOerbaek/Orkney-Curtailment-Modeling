@@ -14,7 +14,7 @@ minutes_forecast = 00
 
 file_name += "_"+str(minutes_forecast)
 
-xts, ts_norms, xf, f_norms, y, yr = pp.makeDataset("2018-12-01", "2019-02-01", hours_forecast=(minutes_forecast/60))
+xts, ts_norms, xf, f_norms, y, yr = pp.makeDataset("2018-12-01", "2019-03-01", hours_forecast=(minutes_forecast/60))
 #Save the norms for later use
 pickle.dump((ts_norms, f_norms), open(config.DATA_PATH+file_name+".norms", "wb"))
 
@@ -26,7 +26,7 @@ if load_model: model = m.load(file_name)
 else: model = m.train_and_save(xts, xf, y, yr, epochs=2, filename=file_name)
 
 # Make test dataset and predict
-xts_test, ts_norms, xf_test, f_norms, y_test, yr_test = pp.makeDataset("2019-02-01", "2019-03-01", hours_forecast=(minutes_forecast/60), norms=(ts_norms, f_norms))
+xts_test, ts_norms, xf_test, f_norms, y_test, yr_test = pp.makeDataset("2019-03-01", "2019-03-21", hours_forecast=(minutes_forecast/60), norms=(ts_norms, f_norms))
 
 zone_acc = np.zeros(len(pp.zone_names))
 reduced_acc = 0
