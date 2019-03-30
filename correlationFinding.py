@@ -83,7 +83,16 @@ def timeDem(start, stop):
     #print(c/len(df.values)*100)
     #print(len(df.values))
 
+def windWindtimeDem(start, stop):
+    start = datetime.strptime(start, '%Y-%m-%d')
+    stop = datetime.strptime(stop, '%Y-%m-%d')
 
+    df = pp.getEdayData()
+    df = df.loc[start_limit:stop_limit]
+    
+    # Get dataframes and resample them.
+    df = pp.getDemandGen(start, stop).resample("10min").mean() # Demand Generation data
+    df = pp.addTimeCols(df)
 
 
 

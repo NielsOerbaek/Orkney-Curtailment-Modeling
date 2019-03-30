@@ -262,3 +262,6 @@ def toOneHot(val,max):
     a = np.zeros(shape=(max,)).astype(int)
     a[val] = 1
     return a
+
+def getEdayData():
+    return pickle.load(open("./data/eday/eday-data.pickle", "rb"))

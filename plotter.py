@@ -101,3 +101,53 @@ def buildModelGraph(start_limit=0, stop_limit=0, zones=0):
     #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
     #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
     plt.show()
+
+
+def buildWindsGraph(start_limit=0, stop_limit=0, zones=0):
+    df = pp.getSingleDataframe(start_limit, stop_limit, fromPickle=True).resample("10min").mean().interpolate(method='linear')
+
+    if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d')
+    if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d')
+
+    df_eday = pp.getEdayData()
+    df_eday = df_eday.loc[start_limit:stop_limit]
+
+    fig = plt.figure()
+    ax1 = fig.add_axes([0.1,0.15,0.85,0.8])
+    ax1.plot(df.index, df["speed"],"k-", linewidth=1, alpha=0.8)
+    ax1.plot(df_eday.index, df_eday["Wind Mean (M/S)"],"b-", linewidth=1, alpha=0.8)
+    ax1.set_xlabel("Time")
+    ax1.set_ylabel("M/S")
+    ax1.grid(b=True, which="both", axis="y")
+    ax1.tick_params(axis="x", which="minor")
+    ax1.grid(b=True, which="major", axis="x", linestyle="-.")
+    ax1.grid(b=True, which="minor", axis="x", linestyle="--")
+    ax1.legend(["OpenWeatherMap", "Eday Turbine"], loc=1, fancybox=True, framealpha=0.5)
+
+    plt.title("Wind speed comparison")
+
+    fig.autofmt_xdate(which="both")
+
+    fig.set_size_inches(15, 8)
+    plt.xticks(rotation=-60)
+
+    #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
+    #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
+    plt.show()
+
+def buildEdayScatter(start_limit=0, stop_limit=0, zones=0):
+    df_full = pp.getSingleDataframe(start_limit, stop_limit, fromPickle=True).resample("10min").mean().interpolate(method='linear')
+
+    if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d')
+    if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d')
+
+    df = pp.getEdayData()
+    df = df.loc[start_limit:stop_limit]
+
+    colors = [[0,0,0]]
+    plt.scatter(df["Wind Mean (M/S)"], df["Power Mean (Kw)"], c=colors, alpha=0.5,s=2)
+    plt.xlabel("Wind Speed (M/S)")
+    plt.ylabel("Power Generated (kW)")
+    plt.yticks([0,100,200,300,400,500,600,700,800,900])
+    plt.title("Relation between windspeeds and generation for Eday 900kW Turbine")
+    plt.show()
