@@ -139,7 +139,7 @@ def getDataframes(start, stop, hours_forecast=3):
     return xh_df, xf_df, y_df
 
 
-def getSingleDataframe(start, stop, fromPickle=False):
+def getSingleDataframe(start="2018-12-01", stop="2019-03-01", fromPickle=False):
     if not fromPickle:
         xh_df, xf_df, y_df = getDataframes(start, stop, 0)
         df = addTimeCols(xh_df).join(addReducedCol(y_df))
@@ -150,10 +150,17 @@ def getSingleDataframe(start, stop, fromPickle=False):
         print("Loaded dataframe as pickle: SingleFrame"+start+"-"+stop)
     return df
 
-def addReducedCol(df):
+def addReducedCol(df, clean=False):
     if "Curtailment" in df.columns: df = df.drop(["Curtailment"], axis=1)
-    r = df[zone_names].apply(np.maximum.reduce, axis=1)[["Core Zone"]].rename(columns={"Core Zone": "Curtailment"})
-    return df.join(r)
+    if not clean:
+        r = df[zone_names].apply(np.maximum.reduce, axis=1)[["Core Zone"]].rename(columns={"Core Zone": "Curtailment"})
+        return df.join(r)
+    else:
+        def de_minimis(z): return 1 if z > 1 else 0
+        r = df[zone_names].sum(axis=1).apply(de_minimis)
+        df["Curtailment"] = r
+        return df
+
 
 def makeTimeseries(x_h,x_f,y):
     samples = len(x_h)-timesteps+1
@@ -216,7 +223,7 @@ def getPredictionData():
     if len(ts) != timesteps: raise Exception("Timeseries has " + str(len(ts)) + " values, but should have " + str(timesteps))
     return ts,f,fdt
 
-def cleanData(df):
+def cleanData(df, verbose=True):
     dt = timedelta(hours=6)
     total_cleaned = 0
     for z in zone_names:
@@ -224,9 +231,30 @@ def cleanData(df):
         cleanCol(df,dt,z)
         r = b - df[z].sum()
         total_cleaned += r
-        print("Cleaned from",z,":",r/6,"hours")
-    print("Total Cleaned:",total_cleaned/6,"hours")
+        if verbose: print("Cleaned from",z,":",r/6,"hours")
+    if verbose: print("Total Cleaned:",total_cleaned/6,"hours")
     return df
+
+def howClean(df):
+    print("How clean?")
+
+    def printStats(df):
+        print("Time with some curtailment in Orkney ANM: {:.2f} hours, which is {:.2f}%".format(df["Curtailment"].sum()/6, df["Curtailment"].sum()/len(df.index)*100))
+        print("Time with curtailment in each zone combined: {:.2f} hours, which is {:.2f}%".format(df[zone_names].sum().sum()/6, df[zone_names].sum().sum()/(len(df.index)*len(zone_names))*100))
+
+    print("----------")
+    print("--- Original dataset:")
+    printStats(df)
+    print("----------")
+    print("--- De Minimis on Reduced:")
+    printStats(addReducedCol(df, clean=True))
+    print("----------")
+    print("--- Anomaly Detection per Zone:")
+    cleaned = addReducedCol(cleanData(df, verbose=False))
+    printStats(cleaned)
+    print("----------")
+    print("--- Both:")
+    printStats(addReducedCol(cleaned, clean=True))
 
 def cleanCol(df, threshold, col_name):
     c,d,e = False, False, False

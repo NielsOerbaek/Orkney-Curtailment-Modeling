@@ -9,8 +9,8 @@ def makeDescriptiveDataset(start, stop):
 
     print("Cleaning data...")
     df = pp.cleanData(df)
-    df = pp.addReducedCol(df)
-    df = pp.estimateWindSpeeds(df)
+    df = pp.addReducedCol(df, clean=True)
+    #df = pp.estimateWindSpeeds(df)
 
     return df
 
@@ -73,17 +73,17 @@ def evaluateModels(start, stop):
 
 
 def evaluateDataframe(df_train,df_predict):
-    percep = m.train_and_save_perceptron(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
-    neural_net = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
+    gdnn = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
+    wtnn = m.train_and_save_simple(df_train[["speed", "weekday","hour"]].values, df_train[["Curtailment"]].values,kfold=False)
 
     def actual(row): return row["Curtailment"]
     def sc(row): return simpleModelK(row["Demand"],row["Generation"],7)
     def cc(row): return correlationModelKPoly(row["speed"],row["weekday"],row["hour"],0)
-    def percep_gen_dem(row): return round(percep.predict([[row[["Demand", "Generation"]].values]])[0][0])
-    def nn_wind_time(row): return round(neural_net.predict([[row[["Demand", "Generation"]].values]])[0][0])
+    def nn_gen_dem(row): return round(gdnn.predict([[row[["Demand", "Generation"]].values]])[0][0])
+    def nn_wind_time(row): return round(wtnn.predict([[row[["speed", "weekday","hour"]].values]])[0][0])
 
-    models = ["Actual", "SC7", "Perceptron", "CC0","G/D FFNN"]
-    model_functions = [actual, sc, percep_gen_dem, cc, nn_wind_time]
+    models = ["Actual", "SC7", "G/D FFNN", "CC4","W/T FFNN"]
+    model_functions = [actual, sc, nn_gen_dem, cc, nn_wind_time]
     models_accs = np.zeros(shape=(len(models),))
 
     # Generate x,y data for the mesh plot
@@ -106,4 +106,5 @@ def evaluateDataframe(df_train,df_predict):
 
 #evaluateModels("2019-02-18", "2019-02-25")
 #evaluateModels("2019-02-11", "2019-03-01")
+#evaluateModels("2019-03-01", "2019-03-15")
 #evaluateModels("2018-12-01", "2019-03-01")

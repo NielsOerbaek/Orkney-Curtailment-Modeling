@@ -22,11 +22,11 @@ def buildModelGraph(start_limit=0, stop_limit=0, zones=0):
     #Full DataSet, used for training
     df_full = pp.getSingleDataframe("2018-12-01", "2019-03-01", fromPickle=True).resample("10min").mean().interpolate(method='linear')
     df_full = pp.cleanData(df_full)
-    df_full = pp.addReducedCol(df_full)
+    df_full = pp.addReducedCol(df_full, clean=True)
 
     df = pp.getSingleDataframe(start_limit, stop_limit, fromPickle=True).resample("10min").mean().interpolate(method='linear')
     df = pp.cleanData(df)
-    df = pp.addReducedCol(df)
+    df = pp.addReducedCol(df, clean=True)
 
     if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d').timestamp()
     if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d').timestamp()
@@ -136,13 +136,16 @@ def buildWindsGraph(start_limit=0, stop_limit=0, zones=0):
     plt.show()
 
 def buildEdayScatter(start_limit=0, stop_limit=0, zones=0):
-    df_full = pp.getSingleDataframe(start_limit, stop_limit, fromPickle=True).resample("10min").mean().interpolate(method='linear')
-
     if start_limit != 0: start_limit = datetime.strptime(start_limit, '%Y-%m-%d')
     if stop_limit != 0: stop_limit = datetime.strptime(stop_limit, '%Y-%m-%d')
 
     df = pp.getEdayData()
-    df = df.loc[start_limit:stop_limit]
+    df = df.loc[start_limit:stop_limit][["Wind Mean (M/S)","Power Mean (Kw)"]]
+
+    df_full = pp.getSingleDataframe(fromPickle=True)
+    df = df_full.join(df,how="inner")
+    #df = pp.addReducedCol(df, clean=True)
+    #df = df[df["Zone 1"] == 1]
 
     colors = [[0,0,0]]
     plt.scatter(df["Wind Mean (M/S)"], df["Power Mean (Kw)"], c=colors, alpha=0.5,s=2)
