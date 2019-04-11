@@ -156,11 +156,30 @@ def addReducedCol(df, clean=False):
         r = df[zone_names].apply(np.maximum.reduce, axis=1)[["Core Zone"]].rename(columns={"Core Zone": "Curtailment"})
         return df.join(r)
     else:
+        print("Applying De Minimis Level...")
         def de_minimis(z): return 1 if z > 1 else 0
         r = df[zone_names].sum(axis=1).apply(de_minimis)
         df["Curtailment"] = r
         return df
 
+def removeGlitches(df, verbose=True):
+    print("Removing anomaly sections.")
+    before = len(df)
+    anomalies = [("2018-12-14","2018-12-19"),
+                ("2018-12-28","2018-12-31"),
+                ("2019-01-30","2019-02-02"),
+                ("2019-02-10","2019-02-12"),
+                ("2019-02-17","2019-02-21")]
+    for a in anomalies:
+        df = removePeriod(df, a[0], a[1])
+        if verbose: print("Removed period:", a)
+    if verbose: print("Removed {} data points".format(before-len(df)))
+    return df
+
+def removePeriod(df, start, stop):
+    start = datetime.strptime(start, '%Y-%m-%d')
+    stop = datetime.strptime(stop, '%Y-%m-%d')
+    return df.drop(df.loc[start:stop].index)
 
 def makeTimeseries(x_h,x_f,y):
     samples = len(x_h)-timesteps+1
@@ -253,8 +272,15 @@ def howClean(df):
     cleaned = addReducedCol(cleanData(df, verbose=False))
     printStats(cleaned)
     print("----------")
-    print("--- Both:")
+    print("--- Remove glitch periods:")
+    noGlitch = removeGlitches(df, verbose=False)
+    printStats(noGlitch)
+    print("----------")
+    print("--- Both anomaly detections:")
     printStats(addReducedCol(cleaned, clean=True))
+    print("----------")
+    print("--- Anomaly Detection and glitch removal:")
+    printStats(removeGlitches(addReducedCol(cleaned, clean=True), verbose=False))
 
 def cleanCol(df, threshold, col_name):
     c,d,e = False, False, False

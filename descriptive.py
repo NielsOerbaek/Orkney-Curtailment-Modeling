@@ -3,14 +3,21 @@ from datetime import datetime
 import numpy as np
 import model as m
 
-def makeDescriptiveDataset(start, stop):
-    df = pp.getSingleDataframe(start, stop, fromPickle=True)
+from scipy.interpolate import interp1d
+
+def makeDescriptiveDataset(start, stop, clean=True, eday=False):
+    df= pp.getSingleDataframe(start, stop, fromPickle=True)
+    if eday:
+        df_eday = pp.getEdayData()
+        df = df.join(df_eday, how="inner")
+    df = pp.addReducedCol(df)
     df.dropna(inplace=True) # Remove NaN entries.
 
-    print("Cleaning data...")
-    df = pp.cleanData(df)
-    df = pp.addReducedCol(df, clean=True)
-    #df = pp.estimateWindSpeeds(df)
+    if clean:
+        print("Cleaning data...")
+        df = pp.cleanData(df)
+        df = pp.addReducedCol(df, clean=True)
+        df = pp.removeGlitches(df)
 
     return df
 
@@ -37,50 +44,93 @@ poly_coefs_full = [-0.0262,0.3693,2.09,-1.626]
 windToGenLinear = lambda w: max(3.501*w + 2.915,0)
 windToGenPolyFull = np.poly1d(poly_coefs_full)
 windToGenPoly11 = np.poly1d(poly_coefs_11)
+windToGenPoints = pp.getSingleDataframe("2019-02-11","2019-03-01",fromPickle=True)[["speed", "Generation"]].round({"speed": 0}).groupby("speed").median().values[:,0]
+windToGenInterp = interp1d(range(0,len(windToGenPoints)), windToGenPoints, bounds_error=False, fill_value="extrapolate")
+
 def correlationModelK(w,d,h,k): return windToGenLinear(w) > (D[d-1][h-1] + k)
 def correlationModelKPoly(w,d,h,k): return windToGenPolyFull(w) > (D[int(d)-1][int(h)-1] + k)
+def correlationModelKCurve(w,d,h,k): return windToGenInterp(w) > (D[int(d)-1][int(h)-1] + k)
 
-def evaluateModels(start, stop):
-    df = makeDescriptiveDataset(start, stop)
+def evaluateModels(start, stop, clean=True):
+    df = makeDescriptiveDataset(start, stop, clean=clean)
+    df_api = df.loc[datetime.strptime("2019-02-11", '%Y-%m-%d'):datetime.strptime("2019-03-01", '%Y-%m-%d')]
     samples = len(df.values)
-    print(samples)
-    print("--- Model Accuracies:")
-    for m in models:
-        hits = 0
-        for v in df.values:
-            if m[1](v[0],v[1]) == v[-1]: hits += 1
-        print(m[0],"&", str(round(hits/samples*100,2))+"%", "\\\\\\hlline")
+    api_samples = len(df_api.values)
+    #TODO: Insert the orkney wide power curve here and evaluate correlation model.
+    wind_data = "speed" #"Wind Mean (M/S)"
+    wind_index = np.where(df.columns.values==wind_data)[0]
+    print(wind_index)
 
-    print("--- Accuracies for SC_k for different values of k")
-    for k in range(-20, 21):
+    index = list(range(-20, 21))
+    values = []
+    names = []
+    styles = []
+
+    vs = []
+    print("$SC_k$")
+    for k in index:
         hits = 0
+        print(".",end="", flush=True)
         for v in df.values:
             if simpleModelK(v[0],v[1],k) == v[-1]: hits += 1
-        print("(", k,",",round(hits/samples*100,2),")")
+        vs.append(round(hits/samples*100,2))
+    values.append(vs)
+    names.append("$SC_k$")
+    styles.append("b-")
+    print()
 
-    print("--- Accuracies for Linear CC_k for different values of k")
-    for k in range(-20, 21):
+    vs = []
+    print("$CC_k$")
+    for k in index:
         hits = 0
+        print(".",end="", flush=True)
         for v in df.values:
-            if correlationModelK(v[2],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
-        print("(", k,",",round(hits/samples*100,2),")")
-    print("--- Accuracies for Poly CC_k for different values of k")
-    for k in range(-20, 21):
-        hits = 0
-        for v in df.values:
-            if correlationModelKPoly(v[2],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
-        print("(", k,",",round(hits/samples*100,2),")")
+            if correlationModelKPoly(v[wind_index],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
+        vs.append(round(hits/samples*100,2))
+    values.append(vs)
+    names.append("$CC_k$")
+    styles.append("r-")
+    print()
 
+    vs = []
+    print("$SC_k$ - API")
+    for k in index:
+        hits = 0
+        print(".",end="", flush=True)
+        for v in df_api.values:
+            if simpleModelK(v[0],v[1],k) == v[-1]: hits += 1
+        vs.append(round(hits/api_samples*100,2))
+    values.append(vs)
+    names.append("$SC_k$ - API")
+    styles.append("b:")
+    print()
+
+    vs = []
+    print("$CC_k$ - API")
+    for k in index:
+        hits = 0
+        print(".",end="", flush=True)
+        for v in df_api.values:
+            if correlationModelKPoly(v[wind_index],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
+        vs.append(round(hits/api_samples*100,2))
+    values.append(vs)
+    names.append("$CC_k$ - API")
+    styles.append("r:")
+    print()
+
+    return [index, values, names, styles]
 
 def evaluateDataframe(df_train,df_predict):
+    wind_data = "Wind Mean (M/S)"
+
     gdnn = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
-    wtnn = m.train_and_save_simple(df_train[["speed", "weekday","hour"]].values, df_train[["Curtailment"]].values,kfold=False)
+    wtnn = m.train_and_save_simple(df_train[[wind_data, "weekday", "hour"]].values, df_train[["Curtailment"]].values,kfold=False)
 
     def actual(row): return row["Curtailment"]
     def sc(row): return simpleModelK(row["Demand"],row["Generation"],7)
-    def cc(row): return correlationModelKPoly(row["speed"],row["weekday"],row["hour"],0)
-    def nn_gen_dem(row): return round(gdnn.predict([[row[["Demand", "Generation"]].values]])[0][0])
-    def nn_wind_time(row): return round(wtnn.predict([[row[["speed", "weekday","hour"]].values]])[0][0])
+    def cc(row): return correlationModelKPoly(row[wind_data],row["weekday"],row["hour"],4)
+    def nn_gen_dem(row): return  round(gdnn.predict([[row[["Demand", "Generation"]].values]])[0][0])
+    def nn_wind_time(row): return  round(wtnn.predict([[row[[wind_data, "weekday","hour"]].values]])[0][0])
 
     models = ["Actual", "SC7", "G/D FFNN", "CC4","W/T FFNN"]
     model_functions = [actual, sc, nn_gen_dem, cc, nn_wind_time]
@@ -102,7 +152,6 @@ def evaluateDataframe(df_train,df_predict):
         print(model, ":", round(models_accs[i]*100,2), "%")
 
     return models, accs
-
 
 #evaluateModels("2019-02-18", "2019-02-25")
 #evaluateModels("2019-02-11", "2019-03-01")
