@@ -35,6 +35,8 @@ def getDemandGen(start=0, end=0):
         data[d] = dict()
         data[d]["Demand"] = s["data"][0]["data"][0]
         data[d]["Generation"] = s["data"][2]["data"][1]+s["data"][3]["data"][1]
+        data[d]["ANM Generation"] = s["data"][2]["data"][1]
+        data[d]["Non-ANM Generation"] = s["data"][3]["data"][1]
 
     df = pd.DataFrame.from_dict(data, orient="index")
     if len(df) == 0: raise ValueError("No data found for dates: "+ str(datetime.fromtimestamp(start)) +" to "+ str(datetime.fromtimestamp(end)))
@@ -50,9 +52,9 @@ def getANMStatus(start=0, end=0, hours=0):
         d = getDate(s["timestamp"]) - timedelta(hours=hours)
         zs = dict()
         for z in zone_names:
+            cs = int(isCurtailed(s[z]))*0.5
             ss = int(isStopped(s[z]))
-            cs = int(isCurtailed(s[z]) or ss)
-            zs[z] = cs
+            zs[z] = cs + ss
         data[d] = zs
 
     df = pd.DataFrame.from_dict(data, orient="index")
@@ -72,6 +74,43 @@ def getWeather(start=0, end=0, hours=0):
     df = pd.DataFrame.from_dict(data, orient="index")
     if len(df) == 0: raise ValueError("No data found for dates: "+ str(datetime.fromtimestamp(start)) +" to "+ str(datetime.fromtimestamp(end)))
     return df
+
+def getMetData(start=0, stop=0):
+    start = datetime.strptime(start, '%Y-%m-%d').timestamp()
+    stop = datetime.strptime(stop, '%Y-%m-%d').timestamp()
+    if stop == 0: stop = start+86400
+    status = db["metforecast"]
+    data = []
+
+    mph_to_mps = 0.44704
+
+    #TODO: Add more days to the met dataset.
+
+    for s in status.find({"timestamp": {"$gt": start-1, "$lt": stop}}):
+        compute_time = datetime.strptime(s["SiteRep"]["DV"]["dataDate"], '%Y-%m-%dT%H:%M:%SZ')
+        try:
+            days = s["SiteRep"]["DV"]["Location"]["Period"]
+            for daily in days:
+                day = datetime.strptime(daily["value"], '%Y-%m-%dZ')
+                for f in daily["Rep"]:
+                    forecast_time = day + timedelta(minutes=int(f["dollar"]))
+                    hours_forecast = forecast_time - compute_time
+                    wind_speed = int(f["S"])*mph_to_mps
+                    if forecast_time > compute_time:
+                        d = dict()
+                        d["forecast_time"] = forecast_time
+                        d["compute_time"] = compute_time
+                        d["hours_forecast"] = hours_forecast
+                        d["wind_speed"] = wind_speed
+                        data.append(d)
+        except:
+            pass
+
+    df = pd.DataFrame(data)
+    df = df.drop_duplicates()
+    if len(df) == 0: raise ValueError("No data found for dates: "+ str(datetime.fromtimestamp(start)) +" to "+ str(datetime.fromtimestamp(stop)))
+    return df
+
 
 def weatherToDict(w):
     d = dict()
@@ -139,15 +178,28 @@ def getDataframes(start, stop, hours_forecast=3):
     return xh_df, xf_df, y_df
 
 
-def getSingleDataframe(start="2018-12-01", stop="2019-03-01", fromPickle=False):
+def getSingleDataframe(start="2018-12-01", stop="2019-03-01", fromPickle=False, clean=False, cleanGlitches=True):
     if not fromPickle:
         xh_df, xf_df, y_df = getDataframes(start, stop, 0)
         df = addTimeCols(xh_df).join(addReducedCol(y_df))
         pickle.dump(df, open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "wb"))
         print("Saved dataframe as pickle: SingleFrame"+start+"-"+stop)
     else:
-        df = pickle.load(open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "rb"))
-        print("Loaded dataframe as pickle: SingleFrame"+start+"-"+stop)
+        try:
+            df = pickle.load(open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "rb"))
+            print("Loaded dataframe as pickle: SingleFrame"+start+"-"+stop)
+        except:
+            xh_df, xf_df, y_df = getDataframes(start, stop, 0)
+            df = addTimeCols(xh_df).join(addReducedCol(y_df))
+            pickle.dump(df, open(config.DATA_PATH+"SingleFrame"+start+"-"+stop, "wb"))
+            print("Saved dataframe as pickle: SingleFrame"+start+"-"+stop)
+
+    if clean:
+        print("Cleaning data...")
+        df = cleanData(df)
+        df = addReducedCol(df, clean=True)
+        if cleanGlitches: df = removeGlitches(df)
+
     return df
 
 def addReducedCol(df, clean=False):
@@ -163,6 +215,7 @@ def addReducedCol(df, clean=False):
         return df
 
 def removeGlitches(df, verbose=True):
+    df = df.copy()
     print("Removing anomaly sections.")
     before = len(df)
     anomalies = [("2018-12-14","2018-12-19"),
@@ -243,6 +296,7 @@ def getPredictionData():
     return ts,f,fdt
 
 def cleanData(df, verbose=True):
+    df = df.copy()
     dt = timedelta(hours=6)
     total_cleaned = 0
     for z in zone_names:
@@ -257,9 +311,15 @@ def cleanData(df, verbose=True):
 def howClean(df):
     print("How clean?")
 
-    def printStats(df):
-        print("Time with some curtailment in Orkney ANM: {:.2f} hours, which is {:.2f}%".format(df["Curtailment"].sum()/6, df["Curtailment"].sum()/len(df.index)*100))
-        print("Time with curtailment in each zone combined: {:.2f} hours, which is {:.2f}%".format(df[zone_names].sum().sum()/6, df[zone_names].sum().sum()/(len(df.index)*len(zone_names))*100))
+    def printStats(df_new):
+        print("Time with some curtailment in Orkney ANM: {:.2f} hours, which is {:.2f}%, {:.2f}% of full set"
+        .format(df_new["Curtailment"].sum()/6,
+        df_new["Curtailment"].sum()/len(df_new.index)*100,
+        df_new["Curtailment"].sum()/len(df.index)*100))
+        print("Time with curtailment in each zone combined: {:.2f} hours, which is {:.2f}%, {:.2f}% of full set"
+        .format(df_new[zone_names].sum().sum()/6,
+        df_new[zone_names].sum().sum()/(len(df_new.index)*len(zone_names))*100,
+        df_new[zone_names].sum().sum()/(len(df.index)*len(zone_names))*100))
 
     print("----------")
     print("--- Original dataset:")
@@ -272,15 +332,24 @@ def howClean(df):
     cleaned = addReducedCol(cleanData(df, verbose=False))
     printStats(cleaned)
     print("----------")
+    print("--- Both anomaly detections:")
+    printStats(addReducedCol(cleaned, clean=True))
+    print("----------")
     print("--- Remove glitch periods:")
     noGlitch = removeGlitches(df, verbose=False)
     printStats(noGlitch)
     print("----------")
-    print("--- Both anomaly detections:")
-    printStats(addReducedCol(cleaned, clean=True))
+    print("--- De Minimis on Reduced:")
+    printStats(addReducedCol(noGlitch, clean=True))
     print("----------")
-    print("--- Anomaly Detection and glitch removal:")
-    printStats(removeGlitches(addReducedCol(cleaned, clean=True), verbose=False))
+    print("--- Anomaly Detection per Zone:")
+    #NOTE: Here we do the anomaly detection before removing the glitch periods,
+    # since removing the glitches messes with the temporal aspect of the anomaly detection.
+    noGlitch_cleaned = removeGlitches(cleaned, verbose=False)
+    printStats(noGlitch_cleaned)
+    print("----------")
+    print("--- Both anomaly detections:")
+    printStats(addReducedCol(noGlitch_cleaned, clean=True))
 
 def cleanCol(df, threshold, col_name):
     c,d,e = False, False, False

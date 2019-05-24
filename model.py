@@ -7,6 +7,7 @@ import numpy as np
 import prepros as pp
 import config
 
+
 #Seed the random number generators to ger repreducible results
 from numpy.random import seed
 from tensorflow import set_random_seed
@@ -115,17 +116,19 @@ def train_and_save_perceptron(x, y, epochs=30, filename="perceptron", kfold=True
 
 def evaluateModel(getModelFunction, x, y, epochs=5, features=32):
     # define 10-fold cross validation test harness
-    kfold = KFold(n_splits=10, shuffle=True)
     cvscores = []
-    fold = 0
-    for train, test in kfold.split(x, y):
-        print("Fold " + str(fold) +": ", end="", flush=True)
-        fold += 1
-        model = getModelFunction()
-        model.fit(x[train],y[train], epochs=epochs, batch_size=32, verbose=0)
-        scores = model.evaluate(x[test], y[test], verbose=0)
-        print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
-        cvscores.append(scores[1] * 100)
+    for i in range(2):
+        print("------ Iter", i)
+        kfold = KFold(n_splits=10, shuffle=True)
+        fold = 0
+        for train, test in kfold.split(x, y):
+            print("Fold " + str(fold) +": ", end="", flush=True)
+            fold += 1
+            model = getModelFunction()
+            model.fit(x[train],y[train], epochs=epochs, batch_size=32, verbose=0)
+            scores = model.evaluate(x[test], y[test], verbose=0)
+            print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+            cvscores.append(scores[1] * 100)
     print("----- FINAL ACC: %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
 def evaluateModel2(getModelFunction, x, y, epochs=5):

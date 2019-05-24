@@ -44,22 +44,26 @@ poly_coefs_full = [-0.0262,0.3693,2.09,-1.626]
 windToGenLinear = lambda w: max(3.501*w + 2.915,0)
 windToGenPolyFull = np.poly1d(poly_coefs_full)
 windToGenPoly11 = np.poly1d(poly_coefs_11)
-windToGenPoints = pp.getSingleDataframe("2019-02-11","2019-03-01",fromPickle=True)[["speed", "Generation"]].round({"speed": 0}).groupby("speed").median().values[:,0]
-windToGenInterp = interp1d(range(0,len(windToGenPoints)), windToGenPoints, bounds_error=False, fill_value="extrapolate")
+windToGenPoints = pp.getSingleDataframe("2019-02-12","2019-03-01",fromPickle=True)[["speed", "Generation"]].round({"speed": 0}).groupby("speed").median().values[:12,0]
+windToGenInterp = interp1d(range(0,len(windToGenPoints)), windToGenPoints, bounds_error=False, fill_value=30)
+edayToGenPoints = [1,1,2,2,3,4,7,11,16,21,24,29,31,32,33,34,34,34,34,35,34,35,30,31,27.5,30.5,24,20,12,9,9,9,6,6,9.5,4.5]
+edayToGenInterp = interp1d(range(0,len(edayToGenPoints)), edayToGenPoints, bounds_error=False, fill_value=30)
 
 def correlationModelK(w,d,h,k): return windToGenLinear(w) > (D[d-1][h-1] + k)
 def correlationModelKPoly(w,d,h,k): return windToGenPolyFull(w) > (D[int(d)-1][int(h)-1] + k)
 def correlationModelKCurve(w,d,h,k): return windToGenInterp(w) > (D[int(d)-1][int(h)-1] + k)
+def correlationModelKCurveEday(w,d,h,k): return edayToGenInterp(w) > (D[int(d)-1][int(h)-1] + k)
 
-def evaluateModels(start, stop, clean=True):
+def evaluateModels(start, stop, clean=True, onlySCk=False):
     df = makeDescriptiveDataset(start, stop, clean=clean)
-    df_api = df.loc[datetime.strptime("2019-02-11", '%Y-%m-%d'):datetime.strptime("2019-03-01", '%Y-%m-%d')]
+    df_api = df.loc[datetime.strptime("2019-02-12", '%Y-%m-%d'):datetime.strptime("2019-03-01", '%Y-%m-%d')]
     samples = len(df.values)
     api_samples = len(df_api.values)
     #TODO: Insert the orkney wide power curve here and evaluate correlation model.
     wind_data = "speed" #"Wind Mean (M/S)"
     wind_index = np.where(df.columns.values==wind_data)[0]
-    print(wind_index)
+    weekday_index = np.where(df.columns.values=="weekday")[0]
+    hour_index = np.where(df.columns.values=="hour")[0]
 
     index = list(range(-20, 21))
     values = []
@@ -67,7 +71,7 @@ def evaluateModels(start, stop, clean=True):
     styles = []
 
     vs = []
-    print("$SC_k$")
+    print("$GD_k$")
     for k in index:
         hits = 0
         print(".",end="", flush=True)
@@ -75,25 +79,27 @@ def evaluateModels(start, stop, clean=True):
             if simpleModelK(v[0],v[1],k) == v[-1]: hits += 1
         vs.append(round(hits/samples*100,2))
     values.append(vs)
-    names.append("$SC_k$")
+    names.append("$GD_k$")
     styles.append("b-")
-    print()
+    print(" - {}% at k = {}".format(max(vs), index[vs.index(max(vs))]))
+
+    if onlySCk: return [index, values, names, styles]
 
     vs = []
-    print("$CC_k$")
+    print("$WT_k$ with interpolated power curve")
     for k in index:
         hits = 0
         print(".",end="", flush=True)
         for v in df.values:
-            if correlationModelKPoly(v[wind_index],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
+            if correlationModelKCurve(v[wind_index],int(v[weekday_index]),int(v[hour_index]),k) == v[-1]: hits += 1
         vs.append(round(hits/samples*100,2))
     values.append(vs)
-    names.append("$CC_k$")
+    names.append("$WT_k$")
     styles.append("r-")
-    print()
+    print(" - {}% at k = {}".format(max(vs), index[vs.index(max(vs))]))
 
     vs = []
-    print("$SC_k$ - API")
+    print("$GD_k$ - API")
     for k in index:
         hits = 0
         print(".",end="", flush=True)
@@ -101,39 +107,39 @@ def evaluateModels(start, stop, clean=True):
             if simpleModelK(v[0],v[1],k) == v[-1]: hits += 1
         vs.append(round(hits/api_samples*100,2))
     values.append(vs)
-    names.append("$SC_k$ - API")
-    styles.append("b:")
-    print()
+    names.append("$GD_k$ - API")
+    styles.append("b--")
+    print(" - {}% at k = {}".format(max(vs), index[vs.index(max(vs))]))
 
     vs = []
-    print("$CC_k$ - API")
+    print("$WT_k$ - API -  with interpolated power curve")
     for k in index:
         hits = 0
         print(".",end="", flush=True)
         for v in df_api.values:
-            if correlationModelKPoly(v[wind_index],int(v[9]),int(v[6]),k) == v[-1]: hits += 1
+            if correlationModelKCurve(v[wind_index],int(v[weekday_index]),int(v[hour_index]),k) == v[-1]: hits += 1
         vs.append(round(hits/api_samples*100,2))
     values.append(vs)
-    names.append("$CC_k$ - API")
-    styles.append("r:")
-    print()
+    names.append("$WT_k$ - API")
+    styles.append("r--")
+    print(" - {}% at k = {}".format(max(vs), index[vs.index(max(vs))]))
 
     return [index, values, names, styles]
 
 def evaluateDataframe(df_train,df_predict):
-    wind_data = "Wind Mean (M/S)"
+    wind_data = "speed"
 
-    gdnn = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
     wtnn = m.train_and_save_simple(df_train[[wind_data, "weekday", "hour"]].values, df_train[["Curtailment"]].values,kfold=False)
+    gdnn = m.train_and_save_simple(df_train[["Demand", "Generation"]].values, df_train[["Curtailment"]].values,kfold=False)
 
     def actual(row): return row["Curtailment"]
-    def sc(row): return simpleModelK(row["Demand"],row["Generation"],7)
-    def cc(row): return correlationModelKPoly(row[wind_data],row["weekday"],row["hour"],4)
+    def gd(row): return simpleModelK(row["Demand"],row["Generation"],7)
+    def wt(row): return correlationModelKCurve(row[wind_data],row["weekday"],row["hour"],6)
     def nn_gen_dem(row): return  round(gdnn.predict([[row[["Demand", "Generation"]].values]])[0][0])
     def nn_wind_time(row): return  round(wtnn.predict([[row[[wind_data, "weekday","hour"]].values]])[0][0])
 
-    models = ["Actual", "SC7", "G/D FFNN", "CC4","W/T FFNN"]
-    model_functions = [actual, sc, nn_gen_dem, cc, nn_wind_time]
+    models = ["Actual", "$GD_7$", "GD FFNN", "$WT_6$","WT FFNN"]
+    model_functions = [actual, gd, nn_gen_dem, wt, nn_wind_time]
     models_accs = np.zeros(shape=(len(models),))
 
     # Generate x,y data for the mesh plot
