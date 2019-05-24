@@ -75,5 +75,4 @@ del model
 #print("\n-----------------------\nPseudo-Normalize Wind speeds")
 #input[:,0] = input[:,0] / 20
 #
-##TODO: Find out how well your estimation is doing.
 #model = m.train_and_save_simple(input,df[labels].values,filename="simple_neural")

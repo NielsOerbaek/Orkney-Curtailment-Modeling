@@ -123,9 +123,7 @@ def buildModelGraph(start_limit=0, stop_limit=0, zones=0, filename="model-compar
 
     fig.set_size_inches(8, 3)
 
-    #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
-    #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
-    if save_to_pdf: fig.savefig("../report/img/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -213,7 +211,7 @@ def buildDeltaZoneGraph(start_limit=0, stop_limit=0, zones=0, clean=False, save_
     fig.set_size_inches(8, 4.5)
     plt.xticks(rotation=-60)
 
-    if save_to_pdf: fig.savefig("../report/plots/"+file_name+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+file_name+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -299,7 +297,7 @@ def buildFirmNotFirmGraph(start_limit=0, stop_limit=0, zones=0, clean=False, sav
 
     fig.set_size_inches(4.9, 3)
 
-    if save_to_pdf: fig.savefig("../report/plots/"+file_name+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+file_name+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -332,8 +330,6 @@ def buildWindsGraph(start_limit=0, stop_limit=0, zones=0):
     fig.set_size_inches(15, 8)
     plt.xticks(rotation=-60)
 
-    #plt.savefig("./static/graphs/cleaned_"+file_name, orientation='landscape')
-    #plt.savefig("./static/pdf/cleaned_"+file_name[:-3]+"pdf", orientation='landscape')
     plt.show()
     plt.clf()
 
@@ -367,7 +363,7 @@ def buildEdayScatter(start_limit=0, stop_limit=0, zones=0, save_to_pdf=False,
     fig = plt.gcf()
     fig.set_size_inches(width, width*0.75)
     fig.tight_layout()
-    if save_to_pdf: fig.savefig("../report/img/eday/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/eday/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -403,7 +399,7 @@ def buildEdayWindOrkneyGenScatter(start_limit=0, stop_limit=0, zones=0, save_to_
     fig.set_size_inches(3.9, 3.2)
     fig.tight_layout()
     #plt.title("Relation between windspeeds and generation for Eday 900kW Turbine")
-    if save_to_pdf: fig.savefig("../report/plots/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -442,7 +438,7 @@ def buildWindWindScatter(start, stop, filename="wind-wind-scatter", save_to_pdf=
     fig.set_size_inches(3.3, 3)
     fig.tight_layout()
     #plt.title("Relation between windspeeds and generation for Eday 900kW Turbine")
-    if save_to_pdf: fig.savefig("../report/plots/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -473,7 +469,7 @@ def plotPowerCurves():
     fig = plt.gcf()
     fig.set_size_inches(4.9, 3)
     fig.tight_layout()
-    fig.savefig('../report/plots/eday_power_curves.pgf')
+    fig.savefig('./plots/eday_power_curves.pgf')
     plt.clf()
 
 def glitchPlot(start, finish, filename):
@@ -503,7 +499,7 @@ def glitchPlot(start, finish, filename):
     fig.set_size_inches(4.9, 7)
     fig.autofmt_xdate(which="both")
     #plt.show()
-    fig.savefig("../report/img/exceptions/"+filename+".pdf")
+    fig.savefig("./plots/exceptions/"+filename+".pdf")
     del fig
     plt.clf()
 
@@ -529,7 +525,7 @@ def plotKModels(data, filename):
     fig = plt.gcf()
     fig.set_size_inches(3.5, 3)
     fig.tight_layout()
-    fig.savefig('../report/plots/'+filename+'.pgf')
+    fig.savefig('./plots/'+filename+'.pgf')
     plt.clf()
 
 def buildWindGenScatter(save_to_pdf=False, filename="wind-gen-scatter", api_only=False):
@@ -549,7 +545,7 @@ def buildWindGenScatter(save_to_pdf=False, filename="wind-gen-scatter", api_only
     fig = plt.gcf()
     fig.set_size_inches(3.5, 3)
     fig.tight_layout()
-    if save_to_pdf: fig.savefig("../report/plots/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -569,7 +565,7 @@ def buildTimeDemScatter():
     fig = plt.gcf()
     fig.set_size_inches(3.5, 3)
     fig.tight_layout()
-    fig.savefig("../report/plots/time-dem-plot.pdf")
+    fig.savefig("./plots/time-dem-plot.pdf")
     plt.clf()
 
 def buildWeekdayHourPlot():
@@ -600,18 +596,18 @@ def buildWeekdayHourPlot():
     fig = plt.gcf()
     fig.set_size_inches(4.9, 3)
     fig.tight_layout(rect=(0,0,0.97,1))
-    fig.savefig("../report/plots/weekday-hour-plot.pdf")
+    fig.savefig("./plots/weekday-hour-plot.pdf")
     plt.clf()
 
 def networkBoxplot():
-    data = pd.read_csv("./data/network-stats.csv")
+    data = pd.read_csv("./datasets/network-stats.csv")
     data.boxplot()
     #plt.ylim(0,100)
     plt.xticks(rotation=-30)
     fig = plt.gcf()
     fig.set_size_inches(2, 2.8)
     fig.tight_layout(rect=(0,0,1,1))
-    fig.savefig("../report/plots/networkBoxplot.pdf")
+    fig.savefig("./plots/networkBoxplot.pdf")
     plt.clf()
 
 def buildTempDemScatter(start, stop, filename="temp-dem-scatter", save_to_pdf=False):
@@ -645,7 +641,7 @@ def buildTempDemScatter(start, stop, filename="temp-dem-scatter", save_to_pdf=Fa
     fig.set_size_inches(3.3, 3)
     fig.tight_layout()
     #plt.title("Relation between windspeeds and generation for Eday 900kW Turbine")
-    if save_to_pdf: fig.savefig("../report/plots/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -681,7 +677,7 @@ def buildMetWindWindScatter(start="2019-03-01", stop="2019-05-01", filename="met
     fig.set_size_inches(3.3, 3)
     fig.tight_layout()
     #plt.title("Relation between windspeeds and generation for Eday 900kW Turbine")
-    if save_to_pdf: fig.savefig("../report/plots/"+filename+".pdf")
+    if save_to_pdf: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     plt.clf()
 
@@ -735,7 +731,7 @@ def metForecastPlot(start="2019-04-01",stop="2019-05-01",smooth=True,fromPickle=
         plt.legend(names)
         fig.set_size_inches(4.9, 8)
         fig.tight_layout()
-    if not show: fig.savefig("../report/plots/"+filename+".pdf")
+    if not show: fig.savefig("./plots/"+filename+".pdf")
     else: plt.show()
     del fig
     plt.clf()
@@ -743,7 +739,7 @@ def metForecastPlot(start="2019-04-01",stop="2019-05-01",smooth=True,fromPickle=
 def certaintyPlot(name=None,model="ere_percep",show=False):
     #df = met.ANNCertainty(fromPickle=False, clean=True, load_model=True)
     if name != None:
-        df = pickle.load(open("data/"+name,"rb"))
+        df = pickle.load(open("datasets/"+name,"rb"))
     else:
         df = met.getFullCombinedMetFrame()
 
@@ -793,38 +789,16 @@ def certaintyPlot(name=None,model="ere_percep",show=False):
     fig.tight_layout()
 
     fig.legend(["Probability of Curtailment","Number of Samples"], bbox_to_anchor=(0.1, 0.96), loc='upper left')
-    if not show: fig.savefig("../report/plots/certainty-"+model+".pdf")
+    if not show: fig.savefig("./plots/certainty-"+model+".pdf")
     else: plt.show()
     plt.clf()
     del fig
 
-def predictiveAccuracy():
-    df = pickle.load(open("data/met-full-frame","rb"))
-    print(df.describe())
-    print(df.shape)
-    df = df.loc[df["ere_wtnn_prediction"] >= 0.5]
-    print(df.shape)
-
 
 def buildAll():
-    buildDeltaZoneGraph("2019-01-14", "2019-01-21", clean=False, save_to_pdf=True)
-    exit()
-    glitchPlot("2019-01-29","2019-02-03", "januaryAllGlitch")
-    certaintyPlot(model="ere_wtnn")
-    certaintyPlot(model="ere_percep")
-    certaintyPlot(model="percep")
-    certaintyPlot(model="wtnn")
-    metForecastPlot()
-    metForecastPlot(smooth=False)
-    metForecastPlot(smooth=False, fromPickle=True)
-    metForecastPlot(start="2019-04-01",stop="2019-05-23",show=True, name="met-full-frame-extended")
-    certaintyPlot(name="met-full-frame-extended")
-    predictiveAccuracy()
-    plotPowerCurves()
-    buildMetWindWindScatter(save_to_pdf=True)
-    buildFirmNotFirmGraph("2019-01-26", "2019-01-29", clean=False, save_to_pdf=True)
 
     buildDeltaZoneGraph("2019-02-11", "2019-03-01", clean=False, save_to_pdf=True)
+    buildDeltaZoneGraph("2019-01-14", "2019-01-21", clean=False, save_to_pdf=True)
     buildDeltaZoneGraph("2019-02-11", "2019-03-01", clean=True, save_to_pdf=True)
     buildDeltaZoneGraph("2019-03-03", "2019-03-05", clean=False, save_to_pdf=True)
 
@@ -857,7 +831,19 @@ def buildAll():
     glitchPlot("2018-12-28","2018-12-31", "decemberDemGlitch")
     glitchPlot("2019-02-09","2019-02-12", "februaryWindGlitch")
     glitchPlot("2019-02-17","2019-02-21", "februaryDemGlitch")
+    glitchPlot("2019-01-29","2019-02-03", "januaryAllGlitch")
 
     buildWindGenScatter(save_to_pdf=True)
     buildWindGenScatter(save_to_pdf=True, filename="wind-gen-scatter-api", api_only=True)
     buildWeekdayHourPlot()
+
+    certaintyPlot(model="ere_wtnn")
+    certaintyPlot(model="ere_percep")
+    certaintyPlot(model="percep")
+    certaintyPlot(model="wtnn")
+    metForecastPlot()
+    metForecastPlot(smooth=False)
+    metForecastPlot(smooth=False, fromPickle=True)
+    plotPowerCurves()
+    buildMetWindWindScatter(save_to_pdf=True)
+    buildFirmNotFirmGraph("2019-01-26", "2019-01-29", clean=False, save_to_pdf=True)

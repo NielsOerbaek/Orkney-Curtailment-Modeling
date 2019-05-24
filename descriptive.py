@@ -59,7 +59,6 @@ def evaluateModels(start, stop, clean=True, onlySCk=False):
     df_api = df.loc[datetime.strptime("2019-02-12", '%Y-%m-%d'):datetime.strptime("2019-03-01", '%Y-%m-%d')]
     samples = len(df.values)
     api_samples = len(df_api.values)
-    #TODO: Insert the orkney wide power curve here and evaluate correlation model.
     wind_data = "speed" #"Wind Mean (M/S)"
     wind_index = np.where(df.columns.values==wind_data)[0]
     weekday_index = np.where(df.columns.values=="weekday")[0]

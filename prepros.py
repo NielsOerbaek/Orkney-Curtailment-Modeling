@@ -84,8 +84,6 @@ def getMetData(start=0, stop=0):
 
     mph_to_mps = 0.44704
 
-    #TODO: Add more days to the met dataset.
-
     for s in status.find({"timestamp": {"$gt": start-1, "$lt": stop}}):
         compute_time = datetime.strptime(s["SiteRep"]["DV"]["dataDate"], '%Y-%m-%dT%H:%M:%SZ')
         try:
@@ -201,6 +199,9 @@ def getSingleDataframe(start="2018-12-01", stop="2019-03-01", fromPickle=False, 
         if cleanGlitches: df = removeGlitches(df)
 
     return df
+
+def saveToCSV(df, name):
+    df.to_csv("./datasets/"+name)
 
 def addReducedCol(df, clean=False):
     if "Curtailment" in df.columns: df = df.drop(["Curtailment"], axis=1)
@@ -369,7 +370,7 @@ def cleanCol(df, threshold, col_name):
         if not e and d and i-ds >= threshold:
             e = True
 
-#TODO: This is not working AT ALL. Use with caution
+#NOTE: This is not working AT ALL. Use with caution
 def estimateWindSpeeds(df):
     genToWind = np.zeros(200)
     print("Calculating wind speeds from generation")
@@ -387,4 +388,4 @@ def toOneHot(val,max):
     return a
 
 def getEdayData():
-    return pickle.load(open("./data/eday/eday-data.pickle", "rb"))
+    return pickle.load(open("./datasets/eday/eday-data.pickle", "rb"))
