@@ -1,6 +1,7 @@
 import pickle
 from datetime import datetime
 import pymongo
+from keras.backend import clear_session
 
 import prepros as pp
 import model as m
@@ -9,54 +10,75 @@ import config
 client = pymongo.MongoClient("mongodb://"+config.writer_user+":"+config.writer_pw+"@"+config.SERVER+"/sse-data")
 db = client["sse-data"]
 
-
 model_files = ["predictor_30","predictor_60","predictor_90","predictor_120","predictor_150","predictor_180"]
 models = dict()
 
+# NOTE: Apparently keras cannot handle more that one model at a time.
+# Then you need to set multiple tf sessions manually.
+# For now we'll just load a model and kill it again each time. Slow, but works.
+# TODO: Implement the above solution.
 def preloadModels():
     print("Loading models: ", end="", flush=True)
     for f in model_files:
         print(f, end=", ", flush=True)
         model = m.load(f)
-        norms = pickle.load(open("./data/"+f+".norms", "rb"))
+        norms = pickle.load(open(config.DATA_PATH+f+".norms", "rb"))
         models[f] = (model,norms)
     print(" - Done!")
 
+
 def makePrediction(ts,f,dt):
+    print("----------------------")
     time_to_forecast = dt - datetime.utcnow()
     model_number = min(max(round(time_to_forecast.seconds / 60 / 30)-1, 0),5)
     model_name = model_files[model_number]
+    print(datetime.utcnow(), "- Making curtailment forecast for", dt, ", which is in", time_to_forecast)
 
-    if model_name in models.keys(): model, norms = models[model_name]
-    else:
-        model = m.load(model_name)
-        norms = pickle.load(open("./data/"+model_name+".norms", "rb"))
+    print("Loading model:", model_name, "...")
+    model = m.load(model_name)
+    norms = pickle.load(open(config.DATA_PATH+model_name+".norms", "rb"))
 
     # Apply norms
     ts_norm, f_norm = norms
     ts, f = ts / ts_norm, f / f_norm
-
     ts, f = [ts], [f] # Wrap input
+
+    print("Do prediction...")
     predictions = model.predict([ts,f])
     zone_prediction = predictions[0][0]
     reduced_prediction = predictions[1][0][0]
 
-    print("Curtailment prediction for", dt, ", which is in ", time_to_forecast)
+    print()
+    print("Overall prediction:", reduced_prediction)
     print("Zone names:", pp.zone_names)
-    print("Zone prediction:", zone_prediction)
-    print("Reduced prediction:", reduced_prediction)
+    print("Zone predictions:", zone_prediction)
 
-    return zone_prediction, reduced_prediction, dt, time_to_forecast
+    print("Clearing session and deleting model.")
+    # Clear the Keras session and kill the model. Should be removed if we can handle the
+    clear_session()
+    del model
 
-def storePrediction(zp,rp,dt,delta):
+    return zone_prediction, reduced_prediction, dt, time_to_forecast, model_name
+
+
+def storePrediction(zp,rp,dt,delta,model):
     pred = dict()
     pred["zones"] = zp.tolist()
     pred["overall"] = float(rp)
     pred["target_time"] = dt.timestamp()
-    pred["prediction_time"] = (dt + delta).timestamp()
+    pred["prediction_time"] = (dt - delta).timestamp()
+    pred["model"] = model
 
     pred_col = db["predictions"]
     pred_col.insert_one(pred)
+    return pred
+
+
+def getAndStorePrediction():
+    ts,f,dt = pp.getPredictionData()
+    zp,rp,dt,td,m = makePrediction(ts,f,dt)
+    return storePrediction(zp,rp,dt,td,m)
+
 
 def getAllPredictions():
-    return list(db["predictions"].find({}, { "_id": 0 }))
+    return list(db["predictions"].find({}, { "_id": 0 }).sort("prediction_time", pymongo.DESCENDING))

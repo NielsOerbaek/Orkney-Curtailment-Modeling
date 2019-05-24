@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Orkney ANM Curtailment Forecast</title>
+  <!-- Compiled and minified CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Compiled and minified JavaScript -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone.min.js"></script>
+</head>
+<body class="container">
+		<h1 class="title">Orkney ANM Curtailment Forecast</h1>
+    <div class="summary lighten-4"></div>
+		<div id="main-prediction" class="row">
+      <div class="col l4 m6 s12">
+        <h3>Overall:</h3>
+        <div class="overall card-panel darken-1">
+          <div id="main-time"><span></span></div>
+          <div id="main-overall"></div>
+          <div class="subtext">risk of curtailment</div>
+          <div id="main-time-source">Time of calculation: <span></span></div>
+        </div>
+        <a class="waves-effect waves-light indigo btn get-forecast">Generate new prediction</a>
+      </div>
+      <div class="col l8 m6 s12">
+        <div class="zones">
+          <h3>Per Zone: <small>(experimental)</small></h3>
+          <div id="main-zones"></div>
+      </div>
+      </div>
+    </div>
+		<hr>
+		<h3>Map of the ANM zones:</h3>
+		<img src="https://www.ssen.co.uk/uploadedImages/SSEPD/SSEN/Content/ANM/Anm-OrkneyNetworkMap.jpg"/>
+
+    <div class="load-modal"><div class="lds-grid loader"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+
+<script>
+  const predictions = {{predictions|safe}}
+  const main = predictions[0]
+  const zone_names = ["Core Zone", "Zone 1", "Zone 1A", "Zone 2", "Zone 2A", "Zone 2B", "Zone 3", "Zone 4", "Zone 4A"]
+  fp = p => Math.round(p*100)+"%"
+  moment.defaultFormat = "HH:mm DD.MM.YYYY"
+
+  $(function() {
+    renderMain(main)
+    $(".get-forecast").click(getNewPrediction)
+  });
+
+  function renderMain(pre){
+    $("#main-overall").html(fp(pre.overall))
+    removeColorClasses($(".overall")).addClass(getColorClass(pre.overall))
+    $("#main-time span").html(moment.unix(pre.target_time).format("Do MMM, HH:mm"))
+    $("#main-time-source span").html(moment.unix(pre.prediction_time).format("HH:mm"))
+    $mainZones = $("#main-zones")
+    $mainZones.html("")
+    pre.zones.forEach((p,i) => {
+      var color_num = (i%5)+1
+      $div = $("<div class='main-zone card-panel blue darken-1'></div>")
+      removeColorClasses($div).addClass(getColorClass(p))
+      $div.appendTo($mainZones)
+      $zoneName = $("<h4>"+zone_names[i]+"</h4>")
+      $zoneName.appendTo($div)
+      $zoneP = $("<h3>"+fp(p)+"</h3>")
+      $zoneP.appendTo($div)
+    })
+    $(".summary").html(makeSummary(pre))
+    removeColorClasses($(".summary")).addClass(getColorClass(pre.overall))
+  }
+
+  function getColorClass(p) {
+    if(p > 0.80) { return "red" }
+    if(p > 0.50) { return "orange"}
+    else {return "teal"}
+  }
+
+  function removeColorClasses(item) {
+    item.removeClass("red").removeClass("orange").removeClass("teal").removeClass("blue")
+    return item
+  }
+
+  function getNewPrediction() {
+    $(".load-modal").fadeIn()
+    $.ajax("/forecast").done(p => renderMain(p)).always(() => $(".load-modal").fadeOut())
+  }
+
+  function makeSummary(pre) {
+    if(pre.overall > 0.80) {
+      return "Summary: There is a high risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."  }
+    if(pre.overall > 0.50) {
+      return "Summary: There is a considerable risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+    }
+    else {
+      return "Summary: There is low risk ("+fp(pre.overall)+") of curtailment at "+moment.unix(pre.target_time).format("HH:mm")+"."
+    }
+  }
+
+</script>
+</body>
+</html>
