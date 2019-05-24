@@ -1,6 +1,12 @@
-# Curtailment Prediction Service
+# Powering the Orkney Cloud
 
 This is the repo for a Msc Thesis project revolving around modeling and understanding curtailment in the Orkney Active Network Management system.
+
+See http://curtailment.net for a graph tool to explore the data.
+
+See http://forecast.curtailment.net for a curtailment forecast based on the models we have developed.
+
+TODO: Add the scraping files to this folder. 
 
 ### Config
 
