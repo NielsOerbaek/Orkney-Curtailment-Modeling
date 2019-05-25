@@ -39,12 +39,7 @@ D = [[ 15.635, 17.215, 18.155, 17.78, 18.265, 18.495, 19.06, 21.245, 22.145, 22.
     [ 16.075, 18.33, 18.02, 17.655, 17.76, 18.23, 18.745, 19.27, 18.815, 18.885, 19.135, 19.96, 22.13, 21.52, 19.33, 20.12, 20.795, 21.28, 22.13, 20.7, 21.06, 21.02, 18.12, 17.78 ],
     [ 16.44, 18.485, 18.905, 18.235, 18.615, 18.73, 18.545, 19.455, 18.3, 18.32, 18.945, 20.005, 21.525, 20.94, 19.415, 19.655, 20.79, 21.345, 21.925, 20.11, 20.875, 21.59, 17.94, 17.5 ]]
 
-poly_coefs_11 = [-0.0703,1.048,-0.891,2.2]
-poly_coefs_full = [-0.0262,0.3693,2.09,-1.626]
 
-windToGenLinear = lambda w: max(3.501*w + 2.915,0)
-windToGenPolyFull = np.poly1d(poly_coefs_full)
-windToGenPoly11 = np.poly1d(poly_coefs_11)
 windToGenPoints = pp.getSingleDataframe("2019-02-12","2019-03-01",fromPickle=True)[["speed", "Generation"]].round({"speed": 0}).groupby("speed").median().values[:12,0]
 windToGenInterp = interp1d(range(0,len(windToGenPoints)), windToGenPoints, bounds_error=False, fill_value=30)
 edayToGenPoints = [1,1,2,2,3,4,7,11,16,21,24,29,31,32,33,34,34,34,34,35,34,35,30,31,27.5,30.5,24,20,12,9,9,9,6,6,9.5,4.5]
@@ -158,8 +153,3 @@ def evaluateDataframe(df_train,df_predict):
         print(model, ":", round(models_accs[i]*100,2), "%")
 
     return models, accs
-
-#evaluateModels("2019-02-18", "2019-02-25")
-#evaluateModels("2019-02-11", "2019-03-01")
-#evaluateModels("2019-03-01", "2019-03-15")
-#evaluateModels("2018-12-01", "2019-03-01")

@@ -12,10 +12,6 @@ def calculatePowerCurve():
     df = pp.getEdayData()
     df_full = pp.getSingleDataframe(fromPickle=True)
 
-    #df = df_full.join(df,how="inner")
-    #df = df[df["Curtailment"] == 0]
-    #df = df[((df["Wind Mean (M/S)"] < 4) | (df["Wind Mean (M/S)"] > 22) | (df["Power Mean (Kw)"] > 10)) & ((df["Wind Mean (M/S)"] < 12) | (df["Wind Mean (M/S)"] > 22) | (df["Power Mean (Kw)"] > 700))]
-
     start = datetime.strptime("2018-12-01", '%Y-%m-%d')
     stop = datetime.strptime("2019-01-01", '%Y-%m-%d')
 
@@ -95,8 +91,3 @@ def highWinds():
     print("All data points", all)
     print("Data points with wind over 25 m/s", high_wind)
     print("Which is {:.2f}%".format(high_wind/all*100))
-
-calculateLoss()
-#plotPowerCurves()
-#orkneyPowerCurves()
-#highWinds()

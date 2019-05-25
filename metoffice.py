@@ -21,8 +21,6 @@ def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-fra
 
             df["prediction"] = [int(desc.correlationModelKCurve(d["wind_speed"],i.weekday()+1,i.hour+1,6)) for i,d in df.iterrows()]
             df["prediction_correct"] = [int(d["prediction"] == d["Curtailment"])*100 for i,d in df.iterrows()]
-            #df["prediction_corrected"] = [int(desc.correlationModelKCurve(d["wind_speed"]/0.875-3.1,i.weekday()+1,i.hour+1,6)) for i,d in df.iterrows()]
-            #df["prediction_corrected_correct"] = [int(d["prediction_corrected"] == d["Curtailment"])*100 for i,d in df.iterrows()]
             df["ere_prediction"] = [int(desc.correlationModelKCurveEday(d["wind_speed"],i.weekday()+1,i.hour+1,6)) for i,d in df.iterrows()]
             df["ere_prediction_correct"] = [int(d["ere_prediction"] == d["Curtailment"])*100 for i,d in df.iterrows()]
             df["speed_delta"] = [d["wind_speed"]-d["speed"] for i,d in df.iterrows()]
@@ -86,7 +84,6 @@ def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-fra
 
     accs = []
     accs.append(hours["prediction_correct"].describe())
-    #accs.append(hours["prediction_corrected_correct"].describe())
     accs.append(hours["ere_prediction_correct"].describe())
     accs.append(hours["percep_prediction_correct"].describe())
     accs.append(hours["ere_percep_prediction_correct"].describe())
