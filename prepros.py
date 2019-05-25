@@ -201,7 +201,7 @@ def getSingleDataframe(start="2018-12-01", stop="2019-03-01", fromPickle=False, 
     return df
 
 def saveToCSV(df, name):
-    df.to_csv("./datasets/"+name)
+    df.to_csv(config.DATA_PATH+""+name)
 
 def addReducedCol(df, clean=False):
     if "Curtailment" in df.columns: df = df.drop(["Curtailment"], axis=1)
@@ -388,4 +388,4 @@ def toOneHot(val,max):
     return a
 
 def getEdayData():
-    return pickle.load(open("./datasets/eday/eday-data.pickle", "rb"))
+    return pickle.load(open(config.DATA_PATH+"eday/eday-data.pickle", "rb"))

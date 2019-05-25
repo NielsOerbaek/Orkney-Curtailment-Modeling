@@ -35,6 +35,7 @@ plt.style.use("seaborn-colorblind")
 import prepros as pp
 import descriptive as desc
 import metoffice as met
+import config
 
 
 def buildModelGraph(start_limit=0, stop_limit=0, zones=0, filename="model-comparison", save_to_pdf=False):
@@ -600,7 +601,7 @@ def buildWeekdayHourPlot():
     plt.clf()
 
 def networkBoxplot():
-    data = pd.read_csv("./datasets/network-stats.csv")
+    data = pd.read_csv(config.DATA_PATH+"network-stats.csv")
     data.boxplot()
     #plt.ylim(0,100)
     plt.xticks(rotation=-30)
@@ -739,7 +740,7 @@ def metForecastPlot(start="2019-04-01",stop="2019-05-01",smooth=True,fromPickle=
 def certaintyPlot(name=None,model="ere_percep",show=False):
     #df = met.ANNCertainty(fromPickle=False, clean=True, load_model=True)
     if name != None:
-        df = pickle.load(open("datasets/"+name,"rb"))
+        df = pickle.load(open(config.DATA_PATH+""+name,"rb"))
     else:
         df = met.getFullCombinedMetFrame()
 

@@ -8,9 +8,11 @@ from datetime import timedelta
 from keras.backend import clear_session
 from math import ceil
 
-def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-frame", code=0):
-    if True:
-        if False:
+import config
+
+def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-frame", code=0, load_partial=False, load_full=False):
+    if load_full:
+        if load_partial:
             print("Making Met-ANM dataset")
             met_df = pp.getMetData(start, stop).set_index("forecast_time")
             anm_df = pp.getSingleDataframe(start, "2019-05-31", fromPickle=True, clean=True)
@@ -25,7 +27,7 @@ def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-fra
             df["ere_prediction_correct"] = [int(d["ere_prediction"] == d["Curtailment"])*100 for i,d in df.iterrows()]
             df["speed_delta"] = [d["wind_speed"]-d["speed"] for i,d in df.iterrows()]
         else:
-            df = pickle.load(open("datasets/"+name,"rb"))
+            df = pickle.load(open(config.DATA_PATH+""+name,"rb"))
 
 
 
@@ -74,11 +76,11 @@ def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-fra
             clear_session()
 
 
-        pickle.dump(df, open("datasets/"+name,"wb"))
+        pickle.dump(df, open(config.DATA_PATH+""+name,"wb"))
 
     else:
-        print("Loading full met frame from","datasets/"+name)
-        df = pickle.load(open("datasets/"+name,"rb"))
+        print("Loading full met frame from",config.DATA_PATH+""+name)
+        df = pickle.load(open(config.DATA_PATH+""+name,"rb"))
 
     hours = df.groupby("hours_forecast")
 
@@ -98,15 +100,15 @@ def evaluateMetForecast(start="2019-04-01",stop="2019-05-01", name="met-full-fra
         "WT-FFNN",
         "WT-FFNN - ERE wind data"]
 
-    pickle.dump(accs, open("datasets/"+name+"-describes","wb"))
-    pickle.dump(names, open("datasets/"+name+"-describes-name","wb"))
+    pickle.dump(accs, open(config.DATA_PATH+""+name+"-describes","wb"))
+    pickle.dump(names, open(config.DATA_PATH+""+name+"-describes-name","wb"))
 
     return accs, names
 
 def makeForecastAccTable(name="met-full-frame"):
     if True:
-        accs = pickle.load(open("datasets/"+name+"-describes", "rb"))
-        names = pickle.load(open("datasets/"+name+"-describes-name", "rb"))
+        accs = pickle.load(open(config.DATA_PATH+""+name+"-describes", "rb"))
+        names = pickle.load(open(config.DATA_PATH+""+name+"-describes-name", "rb"))
         print("loaded met accs from pickle")
     else:
         accs, names = evaluateMetForecast()
@@ -139,7 +141,7 @@ def ANNCertainty(start="2019-04-01",stop="2019-05-01",fromPickle=False, clean=Tr
     else: filename = "ANNCertainty-uncleaned"
     if fromPickle:
         print("Loaded", filename)
-        return pickle.load(open("datasets/"+filename,"rb"))
+        return pickle.load(open(config.DATA_PATH+""+filename,"rb"))
     else:
         print("Making Met-ANM dataset for certaintyPlot", filename)
         met_df = pp.getMetData(start, stop).set_index("forecast_time")
@@ -161,11 +163,11 @@ def ANNCertainty(start="2019-04-01",stop="2019-05-01",fromPickle=False, clean=Tr
 
         print(df["ere_wtnn_prediction_correct"].mean())
 
-        pickle.dump(df, open("datasets/"+filename,"wb"))
+        pickle.dump(df, open(config.DATA_PATH+""+filename,"wb"))
         return df
 
 def hitAccuracy():
-    df = pickle.load(open("datasets/met-full-frame-all","rb"))
+    df = pickle.load(open(config.DATA_PATH+"met-full-frame-all","rb"))
     df = df.loc[df["hours_forecast"] <= timedelta(days=4)]
 
     names = ["prediction", "wtnn_prediction", "ere_prediction", "ere_wtnn_prediction"]
@@ -184,11 +186,10 @@ def hitAccuracy():
         print("Hits on predictions: {:.2f}%".format(df_only_predicted[name+"_correct"].mean()))
 
 def getFullCombinedMetFrame():
-    df = pickle.load(open("datasets/met-full-frame-all","rb"))
-    df_clean = pickle.load(open("datasets/met-full-frame-all-clean","rb"))
+    df = pickle.load(open(config.DATA_PATH+"met-full-frame-all","rb"))
+    df_clean = pickle.load(open(config.DATA_PATH+"met-full-frame-all-clean","rb"))
     df["percep_prediction"] = df_clean["percep_prediction"]
     df["wtnn_prediction"] = df_clean["wtnn_prediction"]
     df["percep_prediction_correct"] = df_clean["percep_prediction_correct"]
     df["wtnn_prediction_correct"] = df_clean["wtnn_prediction_correct"]
-    #df = df.loc[df["hours_forecast"] <= timedelta(days=4)]
     return df

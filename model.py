@@ -18,6 +18,7 @@ def seedRandoms():
     seed(1)
     set_random_seed(2)
 
+#Inital model, not used anymore.
 def train_and_save(xts_train, xf_train, y_train, yr_train, xts_val=None, xf_val=None, y_val=None, yr_val=None, epochs=10, filename="predictor"):
     ts_features = xts_train.shape[-1]
     f_features = xf_train.shape[-1]

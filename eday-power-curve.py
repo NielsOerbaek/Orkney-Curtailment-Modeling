@@ -6,6 +6,7 @@ from datetime import datetime
 import plotter
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
+import config
 
 def calculatePowerCurve():
     df = pp.getEdayData()
