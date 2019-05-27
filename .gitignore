@@ -3,3 +3,4 @@ config.py
 *.h5
 data
 test.py
+*_env

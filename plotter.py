@@ -771,6 +771,7 @@ def certaintyPlot(name=None,model="ere_percep",show=False):
     x2 = x[:-1]
 
     chance_of_curtailment = df.groupby(bins).mean()["Curtailment"]
+    print("[",",".join(list(map(str,chance_of_curtailment.values))),"]")
     fig, ax1 = plt.subplots()
 
     ax1.bar(x2-0.015,chance_of_curtailment.values*100, width=0.015, color=(0, 0, 0, 0.5), edgecolor="k", align="edge")
@@ -838,10 +839,10 @@ def buildAll():
     buildWindGenScatter(save_to_pdf=True, filename="wind-gen-scatter-api", api_only=True)
     buildWeekdayHourPlot()
 
-    certaintyPlot(model="ere_wtnn")
-    certaintyPlot(model="ere_percep")
     certaintyPlot(model="percep")
     certaintyPlot(model="wtnn")
+    certaintyPlot(model="ere_percep")
+    certaintyPlot(model="ere_wtnn")
     metForecastPlot()
     metForecastPlot(smooth=False)
     metForecastPlot(smooth=False, fromPickle=True)
